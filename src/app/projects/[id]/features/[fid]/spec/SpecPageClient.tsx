@@ -52,19 +52,40 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(spec?.raw_content || '')
   const [currentSpec, setCurrentSpec] = useState(spec)
+  const [genError, setGenError] = useState<string | null>(null)
 
   const generateSpec = async () => {
     setIsGenerating(true)
+    setGenError(null)
     try {
       const res = await fetch(`/api/features/${feature.id}/spec`, { method: 'POST' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        const errType = data.errorType || 'unknown'
+        const errMessages: Record<string, string> = {
+          validation: '입력 데이터 부족 — 기능명이나 설명을 먼저 채워주세요',
+          api_key: 'OpenAI API 키 오류 — 기본 템플릿으로 재시도합니다',
+          timeout: 'AI 응답 시간 초과 (55초) — 잠시 후 재시도해주세요',
+          rate_limit: 'API 한도 초과 — 1분 후 재시도해주세요',
+          quota: 'OpenAI 크레딧 부족 — 충전 후 재시도해주세요',
+          db_error: `DB 저장 실패 — ${data.error}`,
+          not_found: '기능을 찾을 수 없습니다',
+          auth: '로그인이 필요합니다',
+        }
+        throw new Error(errMessages[errType] || data.error || '알 수 없는 오류')
+      }
       setCurrentSpec(data.spec)
       setEditContent(data.spec.raw_content || '')
-      toast.success('AI 기능 정의서가 생성되었습니다')
+      if (data.isFallback) {
+        toast.info('OpenAI 연결 없이 기본 템플릿으로 생성됐습니다. [직접 작성 필요] 항목을 채워주세요.')
+      } else {
+        toast.success(`AI 기능 정의서 v${data.version} 생성 완료`)
+      }
       router.refresh()
     } catch (err) {
-      toast.error('정의서 생성 실패')
+      const msg = err instanceof Error ? err.message : '생성 실패'
+      setGenError(msg)
+      toast.error(msg)
     } finally {
       setIsGenerating(false)
     }
@@ -189,20 +210,29 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
       {/* No spec yet */}
       {!currentSpec && (
         <Card className="border-blue-100 bg-blue-50/30">
-          <CardContent className="py-12 text-center">
+          <CardContent className="py-10 text-center">
             <FileText className="w-12 h-12 text-blue-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-700 mb-2">AI 기능 정의서가 없습니다</h3>
-            <p className="text-slate-500 text-sm mb-6">
-              기능 정보를 바탕으로 AI가 상세 기능 정의서를 자동 생성합니다.<br />
-              배경, 범위, 화면 흐름, QA 체크리스트, 외주사 예상 질문까지 포함됩니다.
+            <p className="text-slate-500 text-sm mb-2">
+              기능 정보를 바탕으로 AI가 상세 기능 정의서를 자동 생성합니다.
             </p>
+            <p className="text-xs text-slate-400 mb-5">
+              기능 목적 · 범위 · 화면 흐름 · QA 체크리스트 · 외주사 예상 질문 포함<br />
+              <span className="text-blue-500">OpenAI API 키 미설정 시 편집 가능한 기본 템플릿이 생성됩니다</span>
+            </p>
+            {genError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-left max-w-sm mx-auto">
+                <p className="text-xs font-semibold text-red-700 mb-1">생성 실패 원인</p>
+                <p className="text-xs text-red-600">{genError}</p>
+              </div>
+            )}
             <Button
               onClick={generateSpec}
               disabled={isGenerating}
               className="bg-blue-600 hover:bg-blue-500 gap-2"
             >
               <Zap className="w-4 h-4" />
-              {isGenerating ? '생성 중... (30초 ~ 1분)' : 'AI 기능 정의서 생성'}
+              {isGenerating ? 'AI 분석 중... (30초~1분)' : genError ? '재시도' : 'AI 기능 정의서 생성'}
             </Button>
           </CardContent>
         </Card>

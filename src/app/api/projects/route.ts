@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { seed_data, ...projectData } = body
+    const { seed_data, ai_features, start_mode, ai_analysis, ...projectData } = body
 
     const admin = createAdminClient()
 
@@ -42,7 +42,23 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    // Seed features if requested
+    // AI 분석 기능 목록 저장
+    if (ai_features && Array.isArray(ai_features) && ai_features.length > 0 && project) {
+      const featuresWithProject = ai_features.map((f: Record<string, unknown>) => ({
+        order_key: f.order_key,
+        name: f.name,
+        category: f.category || '신규_개발',
+        description: String(f.description || ''),
+        expected_effect: String(f.expected_effect || ''),
+        priority_group: f.priority_group || 'P0',
+        project_id: project.id,
+        status: 'planning',
+        is_seed: false,
+      }))
+      await admin.from('features').insert(featuresWithProject)
+    }
+
+    // 비포펫 예시 템플릿 기능 저장
     if (seed_data && project) {
       const featuresWithProject = BEFOREPET_SEED_FEATURES.map(f => ({
         ...f,
@@ -50,7 +66,6 @@ export async function POST(request: NextRequest) {
         status: 'planning',
         is_seed: true,
       }))
-
       await admin.from('features').insert(featuresWithProject)
     }
 

@@ -3,6 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSpec } from '@/lib/openai/client'
 
+// =====================================================
+// POST: AI 기능 정의서 생성 (fallback 포함)
+// =====================================================
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,7 +14,7 @@ export async function POST(
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) return NextResponse.json({ error: 'Unauthorized', errorType: 'auth' }, { status: 401 })
 
     const { data: feature } = await supabase
       .from('features')
@@ -19,21 +22,76 @@ export async function POST(
       .eq('id', id)
       .single()
 
-    if (!feature) return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
+    if (!feature) return NextResponse.json({ error: '기능을 찾을 수 없습니다', errorType: 'not_found' }, { status: 404 })
 
-    const projectGoal = (feature.projects as { goal: string })?.goal || ''
-    const rawContent = await generateSpec(feature, projectGoal)
+    // 입력값 검증
+    if (!feature.name || feature.name.trim() === '') {
+      return NextResponse.json({ error: '기능명이 없습니다. 기능 정보를 먼저 입력해주세요.', errorType: 'validation' }, { status: 400 })
+    }
+
+    const projectGoal = (feature.projects as { goal: string; name: string })?.goal || ''
+    const projectName = (feature.projects as { goal: string; name: string })?.name || ''
 
     const admin = createAdminClient()
 
-    // Parse raw content into structured fields
+    // 기존 draft 정의서가 있으면 버전 번호 계산
+    const { data: existingSpecs } = await admin
+      .from('specs')
+      .select('version')
+      .eq('feature_id', id)
+      .order('version', { ascending: false })
+      .limit(1)
+
+    const nextVersion = existingSpecs && existingSpecs.length > 0 ? existingSpecs[0].version + 1 : 1
+
+    let rawContent: string
+    let isFallback = false
+
+    // OpenAI API 키 체크
+    const hasApiKey = !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '' && process.env.OPENAI_API_KEY !== '여기에_OpenAI_API키_붙여넣기')
+
+    if (hasApiKey) {
+      try {
+        // 타임아웃 처리 (55초)
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 55000)
+        
+        rawContent = await generateSpec(feature, projectGoal)
+        clearTimeout(timeoutId)
+      } catch (aiErr: unknown) {
+        const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr)
+        
+        if (errMsg.includes('aborted') || errMsg.includes('timeout')) {
+          return NextResponse.json({ error: 'AI 생성 시간 초과(55초). 잠시 후 재시도해주세요.', errorType: 'timeout' }, { status: 504 })
+        }
+        if (errMsg.includes('401') || errMsg.includes('Unauthorized') || errMsg.includes('Invalid')) {
+          return NextResponse.json({ error: 'OpenAI API 키가 유효하지 않습니다. 설정을 확인해주세요.', errorType: 'api_key' }, { status: 502 })
+        }
+        if (errMsg.includes('429') || errMsg.includes('rate limit')) {
+          return NextResponse.json({ error: 'OpenAI API 한도 초과. 1분 후 재시도해주세요.', errorType: 'rate_limit' }, { status: 429 })
+        }
+        if (errMsg.includes('insufficient_quota')) {
+          return NextResponse.json({ error: 'OpenAI 크레딧이 부족합니다. 충전 후 재시도해주세요.', errorType: 'quota' }, { status: 402 })
+        }
+        // 그 외 AI 에러 → fallback 초안 생성
+        console.error('AI 생성 실패, fallback 전환:', errMsg)
+        rawContent = generateFallbackSpec(feature, projectGoal, projectName)
+        isFallback = true
+      }
+    } else {
+      // API 키 없음 → fallback 초안
+      rawContent = generateFallbackSpec(feature, projectGoal, projectName)
+      isFallback = true
+    }
+
+    // 파싱
     const parsed = parseSpecContent(rawContent)
 
-    const { data: spec, error } = await admin
+    const { data: spec, error: insertError } = await admin
       .from('specs')
       .insert({
         feature_id: id,
-        version: 1,
+        version: nextVersion,
         status: 'draft',
         raw_content: rawContent,
         feature_name: feature.name,
@@ -42,18 +100,25 @@ export async function POST(
       .select()
       .single()
 
-    if (error) throw error
+    if (insertError) {
+      console.error('Spec insert error:', insertError)
+      return NextResponse.json({ error: `DB 저장 실패: ${insertError.message}`, errorType: 'db_error' }, { status: 500 })
+    }
 
-    // Update feature status
+    // Feature 상태 업데이트
     await admin.from('features').update({ status: 'spec_draft' }).eq('id', id)
 
-    return NextResponse.json({ spec })
-  } catch (error) {
-    console.error('Error generating spec:', error)
-    return NextResponse.json({ error: 'Failed to generate spec' }, { status: 500 })
+    return NextResponse.json({ spec, isFallback, version: nextVersion })
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error('Error generating spec:', errMsg)
+    return NextResponse.json({ error: `정의서 생성 중 오류: ${errMsg}`, errorType: 'unknown' }, { status: 500 })
   }
 }
 
+// =====================================================
+// PUT: 정의서 수정
+// =====================================================
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -67,22 +132,138 @@ export async function PUT(
     const body = await request.json()
     const admin = createAdminClient()
 
+    // 최신 draft 정의서 업데이트
+    const { data: latestSpec } = await admin
+      .from('specs')
+      .select('id')
+      .eq('feature_id', id)
+      .eq('status', 'draft')
+      .order('version', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (!latestSpec) return NextResponse.json({ error: '수정할 초안 정의서가 없습니다' }, { status: 404 })
+
     const { data: spec, error } = await admin
       .from('specs')
       .update(body)
-      .eq('feature_id', id)
-      .eq('status', 'draft')
+      .eq('id', latestSpec.id)
       .select()
       .single()
 
     if (error) throw error
-
     return NextResponse.json({ spec })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update spec' }, { status: 500 })
+    return NextResponse.json({ error: '저장 실패' }, { status: 500 })
   }
 }
 
+// =====================================================
+// Fallback 초안 생성 (OpenAI 없이)
+// =====================================================
+function generateFallbackSpec(feature: Record<string, unknown>, projectGoal: string, projectName: string): string {
+  const fname = String(feature.name || '')
+  const fdesc = String(feature.description || '상세 설명이 입력되지 않았습니다.')
+  const feffect = String(feature.expected_effect || '기대 효과가 입력되지 않았습니다.')
+  const fcategory = String(feature.category || '').replace(/_/g, ' ')
+  const fpriority = String(feature.priority_group || '')
+  const fkey = String(feature.order_key || '')
+
+  return `---
+## 기능명
+${fname}
+
+## 기능 배경
+[AI 초안 — 직접 수정 필요]
+프로젝트 "${projectName}"의 ${fpriority} 우선순위 기능입니다.
+${fdesc}
+
+## 현재 문제
+[직접 작성 필요]
+이 기능이 없을 때 발생하는 구체적인 문제를 작성해주세요.
+- 문제 1:
+- 문제 2:
+
+## 관련 사용자
+[직접 작성 필요]
+- 주요 사용자: (예: 보호자, 도그워커, 관리자)
+- 각 사용자의 니즈:
+
+## 포함 범위 (In Scope)
+[직접 작성 필요]
+- [ ] 이번 개발에 포함될 기능 1
+- [ ] 이번 개발에 포함될 기능 2
+- [ ] 이번 개발에 포함될 기능 3
+
+## 제외 범위 (Out of Scope)
+[직접 작성 필요]
+- 이번 범위에서 제외할 사항:
+
+## 화면 흐름
+[직접 작성 필요]
+1. 사용자가 → 화면 진입
+2. → 액션 수행
+3. → 결과 확인
+
+## 상태값 (State Values)
+[직접 작성 필요]
+- 상태값 1: 설명
+- 상태값 2: 설명
+
+## 알림 조건
+[직접 작성 필요]
+- 어떤 상황에서 누구에게 어떤 알림을 보내는지 작성
+
+## 어드민 기능
+[직접 작성 필요]
+- 관리자가 할 수 있어야 하는 기능:
+
+## 데이터 항목
+[직접 작성 필요]
+- 필드명: 타입, 설명
+- 필드명: 타입, 설명
+
+## 예외 케이스
+[직접 작성 필요]
+- 케이스 1: 처리 방법
+- 케이스 2: 처리 방법
+
+## 수용 기준 (Acceptance Criteria)
+[직접 작성 필요]
+- [ ] Given: / When: / Then:
+- [ ] Given: / When: / Then:
+
+## QA 체크리스트
+[직접 작성 필요]
+**정상 플로우**
+- [ ] 기본 동작 확인
+- [ ] 성공 시나리오 확인
+
+**예외 케이스**
+- [ ] 빈 값 처리 확인
+- [ ] 권한 없는 접근 확인
+
+## 외주사 예상 질문
+[직접 작성 필요]
+- Q: 예상 질문 1
+- Q: 예상 질문 2
+
+## 기본 답변 초안
+[직접 작성 필요]
+- A: 질문 1에 대한 답변
+- A: 질문 2에 대한 답변
+---
+
+> ⚠️ 이 정의서는 AI 없이 생성된 기본 템플릿입니다.
+> [직접 작성 필요] 항목을 채워주시거나,
+> OpenAI API 키를 설정한 후 "AI 재생성" 버튼을 눌러주세요.
+> 기능 설명: ${fdesc}
+> 기대 효과: ${feffect}`
+}
+
+// =====================================================
+// 파싱 함수
+// =====================================================
 function parseSpecContent(raw: string): Record<string, string> {
   const sections: Record<string, string> = {}
   const sectionMap: Record<string, string> = {
