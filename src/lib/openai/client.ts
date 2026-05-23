@@ -1,8 +1,11 @@
 import OpenAI from 'openai'
 import type { Feature, Spec, WeeklyPlan, Report, DailyAssessment } from '@/types'
 
+// OPENAI_BASE_URL은 sandbox에 genspark 프록시 주소가 주입되어 있어
+// sk-proj 키 사용 시 401 오류가 발생함. 명시적으로 미설정(= openai.com 직접 사용)
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: undefined, // 시스템 환경변수 OPENAI_BASE_URL 무시, SDK 기본값 사용
 })
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'

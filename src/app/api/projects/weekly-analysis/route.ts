@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// OPENAI_BASE_URL을 실수로 전달하면 sandbox genspark 프록시로 가서 401이 남으니 baseURL: undefined으로 강제지정
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: undefined })
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
 export async function POST(request: NextRequest) {
