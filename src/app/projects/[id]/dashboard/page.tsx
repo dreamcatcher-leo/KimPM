@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import {
   Bell, AlertTriangle, CheckCircle, Clock, TrendingUp,
-  FileText, Calendar, ChevronRight, ExternalLink, Copy
+  FileText, Calendar, ChevronRight, ExternalLink, Copy, Zap
 } from 'lucide-react'
 import type { Project, Report, DailyAssessment, MustCheckItem, Risk, Feature } from '@/types'
 import VendorLinkCard from '@/components/dashboard/VendorLinkCard'
 import FounderBriefCard from '@/components/dashboard/FounderBriefCard'
 import DashboardWeeklyAnalysis from '@/components/dashboard/DashboardWeeklyAnalysis'
+import GenerateBriefButton from '@/components/dashboard/GenerateBriefButton'
 
 export default async function ProjectDashboard({
   params,
@@ -177,8 +178,23 @@ export default async function ProjectDashboard({
         {/* Left column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Today's Brief */}
-          {latestBrief && (
-            <FounderBriefCard brief={latestBrief} projectId={id} />
+          {latestBrief ? (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400">오늘의 AI 브리핑</span>
+                <GenerateBriefButton projectId={id} hasBrief={true} />
+              </div>
+              <FounderBriefCard brief={latestBrief} projectId={id} />
+            </div>
+          ) : (
+            <div className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 p-6 text-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <Zap className="w-6 h-6 text-blue-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700 mb-1">오늘의 Founder Daily Brief</p>
+              <p className="text-xs text-slate-500 mb-4">AI가 오늘 보고/리스크/의사결정 항목을 종합 분석합니다</p>
+              <GenerateBriefButton projectId={id} hasBrief={false} />
+            </div>
           )}
 
           {/* Latest AI Assessment */}

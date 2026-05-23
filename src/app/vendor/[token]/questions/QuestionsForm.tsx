@@ -42,7 +42,6 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      const { createAdminClient } = await import('@/lib/supabase/admin')
       const res = await fetch('/api/vendor/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

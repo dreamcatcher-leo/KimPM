@@ -89,13 +89,20 @@ export default async function VendorHomePage({
         </Card>
       ) : (
         <Card className="border-green-200 bg-green-50/50">
-          <CardContent className="py-3 flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-              ✅
-            </div>
-            <div>
-              <p className="font-medium text-green-800">오늘 보고 완료</p>
-              <p className="text-sm text-green-600 truncate">{todayReport.summary}</p>
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                ✅
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-green-800 mb-1">오늘 보고 완료</p>
+                <p className="text-sm text-green-700 leading-relaxed break-words whitespace-pre-wrap line-clamp-4">
+                  {todayReport.summary}
+                </p>
+                <Link href="report" className="inline-block mt-2">
+                  <span className="text-xs text-green-600 hover:text-green-800 underline underline-offset-2">보고 내용 수정하기 →</span>
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -156,13 +163,17 @@ export default async function VendorHomePage({
           <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">최근 보고</h2>
           <div className="space-y-2">
             {recentReports.map(r => (
-              <div key={r.id} className="flex items-center gap-3 bg-white rounded-lg px-4 py-2.5 border border-slate-100">
-                <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <span className="text-xs text-slate-400 w-24">{r.report_date}</span>
-                <span className="text-sm text-slate-700 truncate flex-1">{r.summary}</span>
-                {r.needs_founder_check && (
-                  <Badge className="text-xs bg-purple-100 text-purple-600">대표 확인</Badge>
-                )}
+              <div key={r.id} className="bg-white rounded-lg px-4 py-3 border border-slate-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-400">{r.report_date}</span>
+                  {r.needs_founder_check && (
+                    <Badge className="text-xs bg-purple-100 text-purple-600 ml-auto">대표 확인</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed break-words line-clamp-3 pl-5">
+                  {r.summary}
+                </p>
               </div>
             ))}
           </div>

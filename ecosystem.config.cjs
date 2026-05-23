@@ -14,7 +14,7 @@ module.exports = {
         OPENAI_API_KEY: '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',
         OPENAI_MODEL: 'gpt-4o',
         DISCORD_WEBHOOK_URL: '',
-        NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+        NEXT_PUBLIC_APP_URL: 'https://3000-ioj61qb1kdgcvuropx8wt-b32ec7bb.sandbox.novita.ai',
         CRON_SECRET: 'deliveryguard-cron-2024',
       },
       watch: false,
