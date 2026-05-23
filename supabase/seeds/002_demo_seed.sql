@@ -1189,38 +1189,48 @@ BEGIN
   -- STEP 13. ChangeRequest 3개
   -- =====================================================
 
+  -- CR1: P0-4 구현 방식 변경
   INSERT INTO change_requests (id, project_id, feature_id, access_link_id,
     title, content, reason, affected_features, schedule_impact, cost_impact,
-    ai_recommendation, status)
-  VALUES
-  -- CR1: P0-4 구현 방식 변경
-  (cr_01, v_project_id, fid_p0_4, v_link_id,
+    alternative, ai_recommendation, status)
+  VALUES (cr_01, v_project_id, fid_p0_4, v_link_id,
     '[P0-4] 지역 판별 방식 변경 — 실시간 → 디바운스',
     '정의서에 명시된 "실시간 판별(매 입력 시 API 호출)" 방식을 "디바운스 500ms + 주소 선택 완료 시점 API 호출" 방식으로 변경을 요청드립니다.',
     '현재 정의서대로 구현 시 주소 입력 중 평균 8회 API 호출 발생. 월 예상 비용 9.6만원 추가. 디바운스 방식으로 변경 시 월 1.2만원 수준으로 절감 가능. 사용자 경험 차이 없음.',
     'P0-4 단독 영향. 타 기능 영향 없음.',
     '영향 없음 (구현 방식 변경, 일정 동일)',
     '비용 절감 70%. 변경 권장.',
-    'ai_recommendation은 위 별도 기재',
-    'pending'),
+    '현재 정의서대로 실시간 호출 유지 (비용 증가 감수)',
+    '변경 승인을 권장합니다. 사용자 경험에 영향이 없고 비용 절감 효과가 명확합니다.',
+    'pending');
 
   -- CR2: P0-2 범위 조정 (qa5 임시 처리)
-  (cr_02, v_project_id, fid_p0_2, v_link_id,
+  INSERT INTO change_requests (id, project_id, feature_id, access_link_id,
+    title, content, reason, affected_features, schedule_impact, cost_impact,
+    alternative, ai_recommendation, status)
+  VALUES (cr_02, v_project_id, fid_p0_2, v_link_id,
     '[P0-2] qa5 잘못 선택 안내 링크 임시 URL 처리 후 배포 요청',
     'qa5 항목(잘못 선택 안내 링크)의 최종 URL 확정 전에, 임시 URL(인스타그램)로 배포하고 URL 확정 후 무중단으로 교체하는 방식을 요청드립니다.',
     'qa5 URL 확정을 기다리면 P0-2 프로덕션 배포가 지연됩니다. 임시 URL로 배포 후 교체하는 방식이 사용자 영향을 최소화합니다.',
     'P0-2 단독',
     '없음 (URL 교체는 서버 배포 없이 가능)',
+    '없음',
+    'URL 확정 후 배포 (현재 방식 유지)',
     'URL 교체 공수 최소화. 임시 배포 후 교체 방식 권장. 단, URL 확정을 최대한 빠르게 진행 권장.',
-    'pending'),
+    'pending');
 
   -- CR3: P1-1 영상 → 슬라이드 대체 제안
-  (cr_03, v_project_id, fid_p1_1, v_link_id,
+  INSERT INTO change_requests (id, project_id, feature_id, access_link_id,
+    title, content, reason, affected_features, schedule_impact, cost_impact,
+    alternative, ai_recommendation, status)
+  VALUES (cr_03, v_project_id, fid_p1_1, v_link_id,
     '[P1-1] 온보딩 영상 → 텍스트/슬라이드 형태로 1차 구현 제안',
     '온보딩 영상 URL이 미확정 상태로, 1차 배포 시 영상 대신 텍스트+이미지 슬라이드 형태로 온보딩 콘텐츠를 구현하고, 영상 준비 후 교체하는 방식을 제안드립니다.',
     '영상 URL 대기 중에는 온보딩 이수 기능 구현 불가. 슬라이드 형태로 1차 구현 후 영상 준비되면 교체하면 게이트 구조 변경 없이 콘텐츠만 교체 가능.',
     'P1-1 단독. 게이트 로직 변경 없음.',
     '영상 제작/조달 일정 불확실 → 슬라이드 대체 시 1주 앞당겨 배포 가능',
+    '없음',
+    '영상 URL 확정까지 P1-1 이수 기능 전체 보류',
     '단기 효율성 높음. 슬라이드 1차 구현 후 영상 교체 방식 권장.',
     'pending');
 
