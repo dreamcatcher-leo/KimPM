@@ -143,18 +143,25 @@ export interface WeeklyPlan {
 }
 
 export interface WeeklyPlanContent {
-  summary: string
-  goals: string[]
-  feature_plans: FeaturePlan[]
-  deliverables: string[]
-  notes: string
+  summary?: string
+  goals?: WeeklyPlanGoal[]
+  feature_plans?: FeaturePlan[]
+  deliverables?: string[]
+  notes?: string
+}
+
+export interface WeeklyPlanGoal {
+  feature: string
+  target: string
+  risk?: string
+  deliverable?: string
 }
 
 export interface FeaturePlan {
-  feature_id: string
-  feature_name: string
-  planned_work: string
-  expected_output: string
+  feature_id?: string
+  feature_name?: string
+  planned_work?: string
+  expected_output?: string
 }
 
 export interface Report {

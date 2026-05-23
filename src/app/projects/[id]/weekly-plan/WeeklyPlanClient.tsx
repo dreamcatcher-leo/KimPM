@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { Zap, CheckCircle, Calendar, ChevronDown, ChevronUp } from 'lucide-react'
-import type { WeeklyPlan, Feature, WeeklyPlanContent } from '@/types'
+import type { WeeklyPlan, Feature, WeeklyPlanContent, WeeklyPlanGoal } from '@/types'
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   draft: { label: 'AI 초안', color: 'bg-yellow-100 text-yellow-700' },
@@ -81,45 +81,70 @@ export default function WeeklyPlanClient({ projectId, plans, features, thisWeekS
 
   function PlanContent({ content }: { content: WeeklyPlanContent | null }) {
     if (!content) return <p className="text-sm text-slate-400">내용 없음</p>
+
+    const goals = content.goals ?? []
+    const featurePlans = content.feature_plans ?? []
+    const deliverables = content.deliverables ?? []
+
     return (
       <div className="space-y-4">
+        {/* 요약 */}
         {content.summary && (
           <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-sm text-blue-800 font-medium">{content.summary}</p>
           </div>
         )}
-        {content.goals && content.goals.length > 0 && (
+
+        {/* 기능별 목표 (DB 실제 구조: goals = [{feature, target, risk, deliverable}]) */}
+        {goals.length > 0 && (
           <div>
-            <p className="text-xs font-semibold text-slate-600 mb-2">이번 주 목표</p>
-            <ul className="space-y-1">
-              {content.goals.map((g, i) => (
-                <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
-                  <span className="text-blue-500 flex-shrink-0">•</span>
-                  {g}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {content.feature_plans && content.feature_plans.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-slate-600 mb-2">기능별 계획</p>
+            <p className="text-xs font-semibold text-slate-600 mb-2">기능별 목표</p>
             <div className="space-y-2">
-              {content.feature_plans.map((fp, i) => (
-                <div key={i} className="border border-slate-200 rounded-lg p-3">
-                  <p className="text-sm font-medium text-slate-900">{fp.feature_name}</p>
-                  <p className="text-xs text-slate-600 mt-1">작업: {fp.planned_work}</p>
-                  <p className="text-xs text-green-600 mt-0.5">산출물: {fp.expected_output}</p>
+              {goals.map((g: WeeklyPlanGoal, i: number) => (
+                <div key={i} className="border border-slate-200 rounded-lg p-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                      {g.feature}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-800">🎯 {g.target}</p>
+                  {g.deliverable && (
+                    <p className="text-xs text-green-700 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      산출물: {g.deliverable}
+                    </p>
+                  )}
+                  {g.risk && g.risk !== '없음' && (
+                    <p className="text-xs text-amber-600">⚠️ {g.risk}</p>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
-        {content.deliverables && content.deliverables.length > 0 && (
+
+        {/* 기능별 계획 (feature_plans 키가 있는 경우) */}
+        {featurePlans.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-slate-600 mb-2">기능별 계획</p>
+            <div className="space-y-2">
+              {featurePlans.map((fp, i) => (
+                <div key={i} className="border border-slate-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-slate-900">{fp.feature_name}</p>
+                  {fp.planned_work && <p className="text-xs text-slate-600 mt-1">작업: {fp.planned_work}</p>}
+                  {fp.expected_output && <p className="text-xs text-green-600 mt-0.5">산출물: {fp.expected_output}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 주간 산출물 */}
+        {deliverables.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-slate-600 mb-2">주간 산출물</p>
             <ul className="space-y-1">
-              {content.deliverables.map((d, i) => (
+              {deliverables.map((d, i) => (
                 <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
                   {d}
@@ -128,6 +153,8 @@ export default function WeeklyPlanClient({ projectId, plans, features, thisWeekS
             </ul>
           </div>
         )}
+
+        {/* 참고사항 */}
         {content.notes && (
           <div className="bg-slate-50 rounded-lg p-3">
             <p className="text-xs font-medium text-slate-500 mb-1">참고사항</p>
