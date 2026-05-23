@@ -14,38 +14,46 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isMagicLink, setIsMagicLink] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
   const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    if (isMagicLink) {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
-        },
-      })
-      if (error) {
-        toast.error(error.message)
-      } else {
-        toast.success('이메일을 확인해주세요. 로그인 링크를 발송했습니다.')
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        toast.error('로그인 실패: ' + error.message)
-      } else {
-        router.push(redirectTo)
-        router.refresh()
-      }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    
+    if (error) {
+      toast.error('로그인 실패: ' + (error.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 올바르지 않습니다.' : error.message))
+      setIsLoading(false)
+      return
     }
-    setIsLoading(false)
+
+    if (!data.user) {
+      toast.error('로그인 중 오류가 발생했습니다.')
+      setIsLoading(false)
+      return
+    }
+
+    // profiles 테이블에서 role 조회
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single()
+
+    const role = profile?.role || 'founder'
+
+    if (role === 'vendor') {
+      toast.success('환영합니다! 외주사 포털로 이동합니다.')
+      router.push('/vendor/home')
+    } else {
+      toast.success('환영합니다!')
+      const redirectTo = searchParams.get('redirectTo') || '/dashboard'
+      router.push(redirectTo)
+    }
+    router.refresh()
   }
 
   return (
@@ -59,14 +67,14 @@ function LoginForm() {
             </div>
             <span className="text-white text-xl font-semibold">DeliveryGuard PM</span>
           </div>
-          <p className="text-slate-400 text-sm">for BeforePet — AI 외주 PM 워크스페이스</p>
+          <p className="text-slate-400 text-sm">AI 외주 PM 워크스페이스</p>
         </div>
 
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
           <CardHeader>
             <CardTitle className="text-white">로그인</CardTitle>
             <CardDescription className="text-slate-400">
-              대표(Founder) 계정으로 로그인하세요
+              이메일과 비밀번호로 로그인하세요. 역할에 따라 자동으로 이동합니다.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -76,49 +84,52 @@ function LoginForm() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="hello@beforepet.com"
+                  placeholder="email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-500"
                 />
               </div>
-              {!isMagicLink && (
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-slate-300">비밀번호</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required={!isMagicLink}
-                    className="bg-slate-700 border-slate-600 text-white"
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-slate-300">비밀번호</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-slate-700 border-slate-600 text-white"
+                />
+              </div>
               <Button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-500"
                 disabled={isLoading}
               >
-                {isLoading ? '처리 중...' : isMagicLink ? '매직링크 발송' : '로그인'}
+                {isLoading ? '로그인 중...' : '로그인'}
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setIsMagicLink(!isMagicLink)}
-                className="text-sm text-slate-400 hover:text-blue-400 transition-colors"
-              >
-                {isMagicLink ? '비밀번호로 로그인' : '이메일 링크로 로그인'}
-              </button>
+            {/* Role 안내 */}
+            <div className="mt-6 pt-4 border-t border-slate-700">
+              <p className="text-slate-500 text-xs text-center mb-3">로그인 후 역할에 따라 자동 이동</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 text-center">
+                  <div className="text-blue-400 font-medium">대표 / 관리자</div>
+                  <div className="text-slate-500 mt-0.5">전체 대시보드</div>
+                </div>
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-2 text-center">
+                  <div className="text-purple-400 font-medium">외주사</div>
+                  <div className="text-slate-500 mt-0.5">외주사 포털</div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <p className="text-center text-slate-500 text-xs mt-6">
-          외주사라면 대표로부터 받은 링크를 통해 접속해주세요
+        <p className="text-center text-slate-600 text-xs mt-6">
+          DeliveryGuard PM — 외주 개발 관리 플랫폼
         </p>
       </div>
     </div>

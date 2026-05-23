@@ -12,6 +12,7 @@ import {
 import type { Project, Report, DailyAssessment, MustCheckItem, Risk, Feature } from '@/types'
 import VendorLinkCard from '@/components/dashboard/VendorLinkCard'
 import FounderBriefCard from '@/components/dashboard/FounderBriefCard'
+import DashboardWeeklyAnalysis from '@/components/dashboard/DashboardWeeklyAnalysis'
 
 export default async function ProjectDashboard({
   params,
@@ -168,6 +169,9 @@ export default async function ProjectDashboard({
           </CardContent>
         </Card>
       </div>
+
+      {/* 주간 실행도 AI 분석 + 지연 리스크 TOP3 */}
+      <DashboardWeeklyAnalysis projectId={id} projectName={project.name} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}

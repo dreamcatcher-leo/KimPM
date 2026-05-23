@@ -87,6 +87,21 @@ export async function POST(
     // 파싱
     const parsed = parseSpecContent(rawContent)
 
+    // qa_checklist_raw → DB의 qa_checklist 컬럼 (jsonb)으로 변환
+    const qaRawText = parsed.qa_checklist_raw as string | undefined
+    delete parsed.qa_checklist_raw
+    
+    // QA 체크리스트를 jsonb 배열로 변환
+    let qaChecklist: { id: string; item: string; checked: boolean }[] = []
+    if (qaRawText) {
+      const lines = qaRawText.split('\n').filter(l => l.trim().startsWith('- ['))
+      qaChecklist = lines.map((line, idx) => ({
+        id: `qa${idx + 1}`,
+        item: line.replace(/^- \[[ x]\] /, '').trim(),
+        checked: false,
+      }))
+    }
+
     const { data: spec, error: insertError } = await admin
       .from('specs')
       .insert({
@@ -96,6 +111,7 @@ export async function POST(
         raw_content: rawContent,
         feature_name: feature.name,
         ...parsed,
+        qa_checklist: qaChecklist.length > 0 ? qaChecklist : null,
       })
       .select()
       .single()
@@ -279,7 +295,7 @@ function parseSpecContent(raw: string): Record<string, string> {
     '데이터 항목': 'data_items',
     '예외 케이스': 'edge_cases',
     '수용 기준': 'acceptance_criteria',
-    'QA 체크리스트': 'qa_checklist_raw',
+    'QA 체크리스트': 'qa_checklist_raw', // raw text, parsed separately
     '외주사 예상 질문': 'vendor_expected_questions',
     '기본 답변 초안': 'vendor_answer_drafts',
   }
