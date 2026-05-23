@@ -111,18 +111,36 @@ function LoginForm() {
               </Button>
             </form>
 
-            {/* Role 안내 */}
+            {/* 테스트 계정 안내 */}
             <div className="mt-6 pt-4 border-t border-slate-700">
-              <p className="text-slate-500 text-xs text-center mb-3">로그인 후 역할에 따라 자동 이동</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 text-center">
-                  <div className="text-blue-400 font-medium">대표 / 관리자</div>
-                  <div className="text-slate-500 mt-0.5">전체 대시보드</div>
-                </div>
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-2 text-center">
-                  <div className="text-purple-400 font-medium">외주사</div>
-                  <div className="text-slate-500 mt-0.5">외주사 포털</div>
-                </div>
+              <p className="text-slate-500 text-xs text-center mb-3">테스트 계정</p>
+              <div className="space-y-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setEmail('leo@beforpet.com'); setPassword('founder1234!') }}
+                  className="w-full bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5 text-left hover:bg-blue-500/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-blue-400 font-medium">대표 / 관리자</div>
+                      <div className="text-slate-500 mt-0.5">leo@beforpet.com · founder1234!</div>
+                    </div>
+                    <span className="text-slate-600 text-xs">클릭하여 입력</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('vendor@beforpet.com'); setPassword('vendor1234!') }}
+                  className="w-full bg-purple-500/10 border border-purple-500/20 rounded-lg p-2.5 text-left hover:bg-purple-500/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-purple-400 font-medium">외주사</div>
+                      <div className="text-slate-500 mt-0.5">vendor@beforpet.com · vendor1234!</div>
+                    </div>
+                    <span className="text-slate-600 text-xs">클릭하여 입력</span>
+                  </div>
+                </button>
               </div>
             </div>
           </CardContent>

@@ -217,6 +217,23 @@ export default function NewProjectPage() {
   // Step 1 완료 조건
   const step1Valid = basicForm.name.trim() && basicForm.vendor_name.trim() && basicForm.contract_start && basicForm.contract_end
 
+  // Step 1 필드별 에러 (다음 버튼 클릭 후 표시)
+  const [step1Touched, setStep1Touched] = useState(false)
+  const step1Errors = {
+    name: step1Touched && !basicForm.name.trim(),
+    vendor_name: step1Touched && !basicForm.vendor_name.trim(),
+    contract_start: step1Touched && !basicForm.contract_start,
+    contract_end: step1Touched && !basicForm.contract_end,
+  }
+
+  const handleNextStep = () => {
+    if (!step1Valid) {
+      setStep1Touched(true)
+      return
+    }
+    setStep(2)
+  }
+
   // =====================================================
   // RENDER: Step 1 — 기본 정보
   // =====================================================
@@ -232,19 +249,49 @@ export default function NewProjectPage() {
         </div>
         <StepIndicator step={1} />
 
+        {/* 미입력 필드 안내 배너 */}
+        {step1Touched && !step1Valid && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700">
+              <span className="font-semibold">필수 항목을 모두 입력해주세요:</span>
+              <ul className="mt-1 text-xs space-y-0.5">
+                {step1Errors.name && <li>• 프로젝트명이 비어있습니다</li>}
+                {step1Errors.vendor_name && <li>• 외주사명이 비어있습니다</li>}
+                {step1Errors.contract_start && <li>• 계약 시작일이 선택되지 않았습니다</li>}
+                {step1Errors.contract_end && <li>• 계약 종료일이 선택되지 않았습니다</li>}
+              </ul>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-5">
           {/* 기본 정보 */}
-          <Card>
+          <Card className={step1Touched && (step1Errors.name || step1Errors.vendor_name) ? 'border-red-200' : ''}>
             <CardHeader><CardTitle className="text-base">기본 정보</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>프로젝트명 <span className="text-red-500">*</span></Label>
-                  <Input name="name" value={basicForm.name} onChange={handleBasicChange} placeholder="예: BeforePet v2.0, 쇼핑몰 리뉴얼" />
+                  <Input
+                    name="name"
+                    value={basicForm.name}
+                    onChange={handleBasicChange}
+                    placeholder="예: BeforePet v2.0, 쇼핑몰 리뉴얼"
+                    className={step1Errors.name ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''}
+                  />
+                  {step1Errors.name && <p className="text-xs text-red-500">프로젝트명을 입력해주세요</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>외주사명 <span className="text-red-500">*</span></Label>
-                  <Input name="vendor_name" value={basicForm.vendor_name} onChange={handleBasicChange} placeholder="(주)개발컴퍼니" />
+                  <Input
+                    name="vendor_name"
+                    value={basicForm.vendor_name}
+                    onChange={handleBasicChange}
+                    placeholder="(주)개발컴퍼니"
+                    className={step1Errors.vendor_name ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''}
+                  />
+                  {step1Errors.vendor_name && <p className="text-xs text-red-500">외주사명을 입력해주세요</p>}
                 </div>
               </div>
               <div className="space-y-2">
@@ -255,17 +302,31 @@ export default function NewProjectPage() {
           </Card>
 
           {/* 계약 정보 */}
-          <Card>
+          <Card className={step1Touched && (step1Errors.contract_start || step1Errors.contract_end) ? 'border-red-200' : ''}>
             <CardHeader><CardTitle className="text-base">계약 정보</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>계약 시작일 <span className="text-red-500">*</span></Label>
-                  <Input type="date" name="contract_start" value={basicForm.contract_start} onChange={handleBasicChange} />
+                  <Input
+                    type="date"
+                    name="contract_start"
+                    value={basicForm.contract_start}
+                    onChange={handleBasicChange}
+                    className={step1Errors.contract_start ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''}
+                  />
+                  {step1Errors.contract_start && <p className="text-xs text-red-500">계약 시작일을 선택해주세요</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>계약 종료일 <span className="text-red-500">*</span></Label>
-                  <Input type="date" name="contract_end" value={basicForm.contract_end} onChange={handleBasicChange} />
+                  <Input
+                    type="date"
+                    name="contract_end"
+                    value={basicForm.contract_end}
+                    onChange={handleBasicChange}
+                    className={step1Errors.contract_end ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''}
+                  />
+                  {step1Errors.contract_end && <p className="text-xs text-red-500">계약 종료일을 선택해주세요</p>}
                 </div>
               </div>
               <div className="space-y-2">
@@ -331,8 +392,7 @@ export default function NewProjectPage() {
           <div className="flex justify-between">
             <Link href="/dashboard"><Button variant="outline">취소</Button></Link>
             <Button
-              onClick={() => setStep(2)}
-              disabled={!step1Valid}
+              onClick={handleNextStep}
               className="gap-2 bg-blue-600 hover:bg-blue-500"
             >
               다음: 요구사항 입력 <ArrowRight className="w-4 h-4" />

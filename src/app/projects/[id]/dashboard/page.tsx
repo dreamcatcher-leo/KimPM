@@ -205,7 +205,7 @@ export default async function ProjectDashboard({
                   <CardTitle className="text-sm font-semibold">최근 AI 판단 카드</CardTitle>
                   <Link href={`/projects/${id}/reports`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                      전체 보기 <ChevronRight className="w-3 h-3" />
+                      AI 판단 전체 보기 <ChevronRight className="w-3 h-3" />
                     </Button>
                   </Link>
                 </div>
@@ -254,7 +254,7 @@ export default async function ProjectDashboard({
                   </CardTitle>
                   <Link href={`/projects/${id}/must-check`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                      전체 <ChevronRight className="w-3 h-3" />
+                      Must-Check 전체 보기 <ChevronRight className="w-3 h-3" />
                     </Button>
                   </Link>
                 </div>
@@ -284,7 +284,7 @@ export default async function ProjectDashboard({
                   </CardTitle>
                   <Link href={`/projects/${id}/risks`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                      전체 <ChevronRight className="w-3 h-3" />
+                      오픈 리스크 전체 보기 <ChevronRight className="w-3 h-3" />
                     </Button>
                   </Link>
                 </div>
@@ -359,7 +359,7 @@ export default async function ProjectDashboard({
                 <CardTitle className="text-sm font-semibold">기능 현황</CardTitle>
                 <Link href={`/projects/${id}/features`}>
                   <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                    전체 <ChevronRight className="w-3 h-3" />
+                    기능 전체 보기 <ChevronRight className="w-3 h-3" />
                   </Button>
                 </Link>
               </div>
@@ -394,7 +394,7 @@ export default async function ProjectDashboard({
                 <CardTitle className="text-sm font-semibold">최근 보고</CardTitle>
                 <Link href={`/projects/${id}/reports`}>
                   <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                    전체 <ChevronRight className="w-3 h-3" />
+                    최근 보고 전체 보기 <ChevronRight className="w-3 h-3" />
                   </Button>
                 </Link>
               </div>

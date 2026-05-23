@@ -8,7 +8,8 @@ import TopBar from '@/components/layout/TopBar'
 import AppSidebar from '@/components/layout/AppSidebar'
 import {
   Plus, ExternalLink, AlertTriangle, Bell, CheckCircle,
-  Clock, TrendingUp, TrendingDown, Minus, Activity, Zap
+  Clock, TrendingUp, TrendingDown, Minus, Activity, Zap,
+  Target, Brain, FileWarning, ChevronRight
 } from 'lucide-react'
 import type { Profile, Project } from '@/types'
 import DashboardWeeklyAnalysis from '@/components/dashboard/DashboardWeeklyAnalysis'
@@ -249,6 +250,146 @@ export default async function DashboardPage() {
                   <span className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-400 rounded-full inline-block" />진행 중 {totalInProgress}</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 bg-slate-500 rounded-full inline-block" />미착수 {totalFeatures - totalCompleted - totalInProgress}</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* 대표 결정함 + Digest 3줄 요약 */}
+          {/* ============================================ */}
+          {allStats.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* 대표 결정함 — 지금 결정해야 하는 것 TOP 3 */}
+              <div className="lg:col-span-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="w-4 h-4 text-orange-500" />
+                  <h2 className="text-sm font-bold text-slate-800">지금 대표가 결정해야 할 것</h2>
+                  <Badge className="bg-orange-100 text-orange-700 text-xs border-0">
+                    {Math.min(3, totalDecisions + totalMustChecks + totalOpenRisks)}건
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {/* Must-Check 항목 */}
+                  {totalMustChecks > 0 && allStats.slice(0, 1).map(s => (
+                    <Link key={`mc-${s.project.id}`} href={`/projects/${s.project.id}/must-check`}>
+                      <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors cursor-pointer">
+                        <Bell className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-purple-900">Must-Check {s.mustChecks}건 확인 필요</span>
+                            <Badge className="bg-purple-200 text-purple-800 text-xs border-0">즉시</Badge>
+                          </div>
+                          <p className="text-xs text-purple-700 mt-0.5">
+                            직접 확인하지 않으면 외주사가 기다리다 잘못된 방향으로 진행할 수 있습니다
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      </div>
+                    </Link>
+                  ))}
+
+                  {/* 의사결정 대기 */}
+                  {totalDecisions > 0 && allStats.slice(0, 1).map(s => (
+                    <Link key={`dec-${s.project.id}`} href={`/projects/${s.project.id}/decisions`}>
+                      <div className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors cursor-pointer">
+                        <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-orange-900">의사결정 대기 {s.decisions}건</span>
+                            <Badge className="bg-orange-200 text-orange-800 text-xs border-0">오늘 안에</Badge>
+                          </div>
+                          <p className="text-xs text-orange-700 mt-0.5">
+                            대표 결정이 없으면 개발이 중단되거나 외주사가 임의로 진행해 나중에 분쟁이 생깁니다
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                      </div>
+                    </Link>
+                  ))}
+
+                  {/* 오픈 리스크 */}
+                  {totalOpenRisks > 0 && allStats.slice(0, 1).map(s => (
+                    <Link key={`risk-${s.project.id}`} href={`/projects/${s.project.id}/risks`}>
+                      <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors cursor-pointer">
+                        <FileWarning className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-red-900">지연 리스크 {s.openRisks}건 미해결</span>
+                            <Badge className="bg-red-200 text-red-800 text-xs border-0">일정 위험</Badge>
+                          </div>
+                          <p className="text-xs text-red-700 mt-0.5">
+                            해결되지 않은 리스크가 있으면 납기일이 밀릴 가능성이 높습니다
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      </div>
+                    </Link>
+                  ))}
+
+                  {/* 모두 해결된 경우 */}
+                  {totalDecisions === 0 && totalMustChecks === 0 && totalOpenRisks === 0 && (
+                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <p className="text-sm text-green-800 font-medium">지금 당장 결정해야 할 것이 없습니다 ✅</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Digest 3줄 요약 */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-4 h-4 text-blue-500" />
+                  <h2 className="text-sm font-bold text-slate-800">오늘의 3줄 요약</h2>
+                </div>
+                <Card className="bg-slate-900 border-slate-700">
+                  <CardContent className="pt-4 space-y-3">
+                    {/* 오늘 보고 상태 */}
+                    <div className="flex items-start gap-2">
+                      <span className="text-slate-400 text-xs mt-0.5">📊</span>
+                      <div>
+                        <p className="text-xs text-slate-400">보고 현황</p>
+                        <p className="text-sm text-white font-medium">
+                          {allStats.length > 0
+                            ? `이번 주 보고 ${thisWeekReports}건 / 예상 ${allStats.length * workingDaysElapsed}건`
+                            : '활성 프로젝트 없음'}
+                        </p>
+                      </div>
+                    </div>
+                    {/* 가장 위험한 기능 */}
+                    <div className="flex items-start gap-2">
+                      <span className="text-slate-400 text-xs mt-0.5">⚠️</span>
+                      <div>
+                        <p className="text-xs text-slate-400">가장 위험한 상황</p>
+                        <p className="text-sm text-white font-medium">
+                          {riskStatus.level === '높음'
+                            ? `오픈 리스크 ${totalOpenRisks}건 + 의사결정 ${totalDecisions}건 미해결`
+                            : riskStatus.level === '보통'
+                            ? `리스크 ${totalOpenRisks}건 또는 결정 대기 ${totalDecisions}건`
+                            : '현재 특이사항 없음'}
+                        </p>
+                      </div>
+                    </div>
+                    {/* 지금 승인 필요 */}
+                    <div className="flex items-start gap-2">
+                      <span className="text-slate-400 text-xs mt-0.5">✅</span>
+                      <div>
+                        <p className="text-xs text-slate-400">지금 승인 필요</p>
+                        <p className="text-sm text-white font-medium">
+                          {totalDecisions > 0
+                            ? `의사결정 ${totalDecisions}건 — 대표 승인 대기 중`
+                            : totalMustChecks > 0
+                            ? `Must-Check ${totalMustChecks}건 확인 필요`
+                            : '없음'}
+                        </p>
+                      </div>
+                    </div>
+                    {/* 전체 진행도 */}
+                    <div className="border-t border-slate-700 pt-2 mt-1">
+                      <p className="text-xs text-slate-500">전체 진행도 {overallProgress}% · {totalCompleted}/{totalFeatures}개 완료</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}

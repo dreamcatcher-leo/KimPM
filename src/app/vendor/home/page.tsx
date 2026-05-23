@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   FileText, Send, MessageSquare, GitBranch, CheckSquare,
   BookOpen, Clock, ChevronRight, AlertCircle, CheckCircle,
-  Calendar, LogOut, Bell
+  Calendar, LogOut, Bell, Shield, AlertOctagon, Info
 } from 'lucide-react'
 import type { AccessLink, Project, Feature, Report } from '@/types'
 
@@ -63,6 +63,18 @@ export default async function VendorHomePage() {
 
   const token = link.token
 
+  // session 기반 내부 라우팅 — token을 URL에 노출하지 않음 (vendor/home 기반)
+  // 단, 실제 페이지 이동은 token이 필요한 /vendor/[token]/... 경로 유지
+  // 내부 네비게이션 전체를 token 변수로 통일하되, "홈 (레거시)" 제거
+  const navItems = [
+    { href: `/vendor/${token}/specs`, label: '기능 정의서', icon: BookOpen },
+    { href: `/vendor/${token}/report`, label: '일일 보고', icon: Send },
+    { href: `/vendor/${token}/questions`, label: '협의 기록', icon: MessageSquare },
+    { href: `/vendor/${token}/change-request`, label: '변경 요청', icon: GitBranch },
+    { href: `/vendor/${token}/completion`, label: '완료 제출', icon: CheckSquare },
+    { href: `/vendor/${token}/evidence`, label: '증빙자료', icon: FileText },
+  ]
+
   // 병렬로 데이터 조회
   const [
     { data: features },
@@ -106,15 +118,12 @@ export default async function VendorHomePage() {
   // 답변된 질문
   const answeredQuestions = pendingQuestions || []
 
-  const navItems = [
-    { href: `/vendor/${token}`, label: '홈 (레거시)' },
-    { href: `/vendor/${token}/specs`, label: '기능 정의서' },
-    { href: `/vendor/${token}/report`, label: '일일 보고' },
-    { href: `/vendor/${token}/questions`, label: '질문' },
-    { href: `/vendor/${token}/change-request`, label: '변경 요청' },
-    { href: `/vendor/${token}/completion`, label: '완료 제출' },
-    { href: `/vendor/${token}/evidence`, label: '증빙자료' },
-  ]
+  // 이번 주 합의 범위 데이터 파싱
+  const weekStart = (weeklyPlan as Record<string, unknown> | null)?.week_start as string | null
+  const weekEnd = (weeklyPlan as Record<string, unknown> | null)?.week_end as string | null
+  const weeklyGoalCount = weeklyGoals.length
+  const pendingApprovalCount = specApprovedFeatures.length
+  const changeRequestCount = (openChangeRequests || []).length
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -137,9 +146,9 @@ export default async function VendorHomePage() {
               </form>
             </div>
           </div>
-          {/* 탭 */}
+          {/* 탭 — token URL 사용하되 레이블 정비 */}
           <div className="flex gap-1 pb-0 overflow-x-auto">
-            {navItems.slice(1).map(item => (
+            {navItems.map(item => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -162,6 +171,71 @@ export default async function VendorHomePage() {
             {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
           </p>
         </div>
+
+        {/* ============================================ */}
+        {/* 이번 주 합의 범위 카드 (P1 신규) */}
+        {/* ============================================ */}
+        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="w-4 h-4 text-indigo-600" />
+              <span className="text-indigo-800">이번 주 합의 범위</span>
+              {weekStart && weekEnd && (
+                <span className="text-xs text-slate-400 font-normal">{weekStart} ~ {weekEnd}</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* 이번 주 목표 */}
+              <div className="bg-white rounded-xl border border-indigo-100 p-3 text-center">
+                <div className="text-2xl font-bold text-indigo-700">{weeklyGoalCount}</div>
+                <div className="text-xs text-slate-500 mt-0.5">이번 주 목표</div>
+              </div>
+              {/* 대표 확인 대기 */}
+              <div className={`rounded-xl border p-3 text-center ${pendingApprovalCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}`}>
+                <div className={`text-2xl font-bold ${pendingApprovalCount > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{pendingApprovalCount}</div>
+                <div className="text-xs text-slate-500 mt-0.5">대표 확인 대기</div>
+              </div>
+              {/* 변경 요청 진행 중 */}
+              <div className={`rounded-xl border p-3 text-center ${changeRequestCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
+                <div className={`text-2xl font-bold ${changeRequestCount > 0 ? 'text-red-600' : 'text-slate-400'}`}>{changeRequestCount}</div>
+                <div className="text-xs text-slate-500 mt-0.5">변경 요청 처리 중</div>
+              </div>
+              {/* 진행 중 기능 */}
+              <div className="bg-white rounded-xl border border-blue-100 p-3 text-center">
+                <div className="text-2xl font-bold text-blue-600">{inProgressFeatures.length}</div>
+                <div className="text-xs text-slate-500 mt-0.5">완료 제출 가능</div>
+              </div>
+            </div>
+
+            {/* 범위 방어 배지 */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs">
+                ✅ 합의 범위 내 작업 중
+              </Badge>
+              {changeRequestCount > 0 && (
+                <Badge className="bg-orange-100 text-orange-700 border border-orange-200 text-xs">
+                  ⚠️ 추가 협의 필요 {changeRequestCount}건
+                </Badge>
+              )}
+              {pendingApprovalCount > 0 && (
+                <Badge className="bg-red-100 text-red-700 border border-red-200 text-xs">
+                  🚫 대표 승인 전 착수 금지 {pendingApprovalCount}건
+                </Badge>
+              )}
+            </div>
+
+            {/* 안내 문구 */}
+            <div className="mt-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+              <p className="text-xs text-indigo-700 flex items-start gap-1">
+                <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                변경 요청 없이 합의 범위를 벗어난 작업을 시작하면 예산/일정 분쟁이 생길 수 있습니다.
+                범위 외 작업은 반드시 변경 요청을 먼저 등록하세요.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* 오늘 할 일 - 핵심 액션 */}
         <Card className={`border-2 ${hasTodayReport ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
@@ -213,9 +287,9 @@ export default async function VendorHomePage() {
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-600" />
               이번 주 계획
-              {weeklyPlan && (
+              {weekStart && weekEnd && (
                 <span className="text-xs text-slate-500 font-normal">
-                  {(weeklyPlan as Record<string, unknown>).week_start as string} ~ {(weeklyPlan as Record<string, unknown>).week_end as string}
+                  {weekStart} ~ {weekEnd}
                 </span>
               )}
             </CardTitle>
@@ -223,7 +297,7 @@ export default async function VendorHomePage() {
           <CardContent>
             {weeklyGoals.length > 0 ? (
               <div className="space-y-2">
-                {weeklyGoals.slice(0, 5).map((goal: { feature?: string; target?: string; risk?: string; deliverable?: string }, idx: number) => (
+                {weeklyGoals.slice(0, 5).map((goal, idx) => (
                   <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50">
                     <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
                       {idx + 1}
@@ -232,6 +306,10 @@ export default async function VendorHomePage() {
                       <div className="text-sm font-medium text-slate-800 truncate">{goal.feature || `목표 ${idx + 1}`}</div>
                       {goal.target && <div className="text-xs text-slate-500 mt-0.5">{goal.target}</div>}
                       {goal.deliverable && <div className="text-xs text-blue-600 mt-0.5">📦 {goal.deliverable}</div>}
+                      {/* 범위 방어 배지 인라인 */}
+                      <div className="flex gap-1 mt-1">
+                        <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">합의 범위 내</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -240,6 +318,7 @@ export default async function VendorHomePage() {
               <div className="text-center py-6 text-slate-400">
                 <Calendar className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">이번 주 계획이 아직 없습니다</p>
+                <p className="text-xs text-slate-400 mt-1">대표의 주간 계획 수립 후 표시됩니다</p>
               </div>
             )}
           </CardContent>
@@ -262,7 +341,8 @@ export default async function VendorHomePage() {
                     <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
                       <Badge variant="outline" className="text-xs text-purple-600 border-purple-200">진행 중</Badge>
                       <span className="text-sm text-slate-700">[{f.order_key}] {f.name}</span>
-                      <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
+                      {/* 범위 방어 배지 */}
+                      <Badge className="ml-auto text-xs bg-green-50 text-green-700 border border-green-200">합의 범위 내</Badge>
                     </div>
                   </Link>
                 ))}
@@ -279,6 +359,7 @@ export default async function VendorHomePage() {
                 <BookOpen className="w-4 h-4 text-blue-600" />
                 기능 정의서 확인 필요
                 <Badge className="bg-blue-100 text-blue-700 text-xs">{specApprovedFeatures.length}건</Badge>
+                <Badge className="bg-red-100 text-red-700 border border-red-200 text-xs ml-auto">대표 승인 전 착수 금지</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -309,7 +390,7 @@ export default async function VendorHomePage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Bell className="w-4 h-4 text-green-600" />
-                <span className="text-green-700">답변된 질문</span>
+                <span className="text-green-700">대표 답변 도착</span>
                 <Badge className="bg-green-100 text-green-700 text-xs">{answeredQuestions.length}건</Badge>
               </CardTitle>
             </CardHeader>
@@ -325,7 +406,7 @@ export default async function VendorHomePage() {
               <Link href={`/vendor/${token}/questions`}>
                 <Button variant="outline" size="sm" className="mt-3 w-full gap-2">
                   <MessageSquare className="w-4 h-4" />
-                  질문 & 답변 전체 보기
+                  협의 기록 전체 보기
                 </Button>
               </Link>
             </CardContent>
@@ -340,6 +421,7 @@ export default async function VendorHomePage() {
                 <GitBranch className="w-4 h-4 text-orange-500" />
                 처리 중인 변경 요청
                 <Badge className="bg-orange-100 text-orange-700 text-xs">{(openChangeRequests || []).length}건</Badge>
+                <Badge className="bg-yellow-100 text-yellow-700 border border-yellow-200 text-xs ml-auto">예산 영향 가능</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -363,13 +445,16 @@ export default async function VendorHomePage() {
         {/* 빠른 액션 */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { href: `/vendor/${token}/report`, icon: Send, label: '일일 보고', color: 'text-blue-600 bg-blue-50' },
-            { href: `/vendor/${token}/questions`, icon: MessageSquare, label: '질문 등록', color: 'text-purple-600 bg-purple-50' },
-            { href: `/vendor/${token}/change-request`, icon: GitBranch, label: '변경 요청', color: 'text-orange-600 bg-orange-50' },
-            { href: `/vendor/${token}/completion`, icon: CheckSquare, label: '완료 제출', color: 'text-green-600 bg-green-50' },
-          ].map(({ href, icon: Icon, label, color }) => (
+            { href: `/vendor/${token}/report`, icon: Send, label: '일일 보고', color: 'text-blue-600 bg-blue-50', badge: null },
+            { href: `/vendor/${token}/questions`, icon: MessageSquare, label: '협의 기록', color: 'text-purple-600 bg-purple-50', badge: null },
+            { href: `/vendor/${token}/change-request`, icon: GitBranch, label: '변경 요청', color: 'text-orange-600 bg-orange-50', badge: changeRequestCount > 0 ? changeRequestCount : null },
+            { href: `/vendor/${token}/completion`, icon: CheckSquare, label: '완료 제출', color: 'text-green-600 bg-green-50', badge: null },
+          ].map(({ href, icon: Icon, label, color, badge }) => (
             <Link key={href} href={href}>
-              <div className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer">
+              <div className="relative flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer">
+                {badge !== null && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">{badge}</span>
+                )}
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
                   <Icon className="w-5 h-5" />
                 </div>
