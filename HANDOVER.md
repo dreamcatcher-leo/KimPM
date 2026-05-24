@@ -64,7 +64,17 @@ src/
 
 ---
 
-## 4. 최근 완료된 작업 (세션 5)
+## 4. 최근 완료된 작업 (세션 6)
+
+| 섹션 | 작업 | 상태 |
+|------|------|------|
+| 반응형 | 사이드바 모바일 슬라이드 토글 (AppSidebar + SidebarWrapper 신규) | ✅ |
+| 반응형 | TopBar 햄버거 버튼 추가 (`lg:hidden`) | ✅ |
+| 반응형 | 모바일 백드롭 오버레이, 네비 클릭 시 자동 닫힘 | ✅ |
+| 반응형 | dashboard 3열 지표 모바일 대응 (`sm:grid-cols-3`) | ✅ |
+| 배포 | GitHub push + Vercel 배포 (`kimpm.vercel.app`) | ✅ |
+
+### 세션 5 완료 작업
 
 | 섹션 | 작업 | 상태 |
 |------|------|------|
@@ -72,13 +82,13 @@ src/
 | 섹션 7 | 기능정의서 전달/외주사 열람 구조 (sent_at, viewed_at) | ✅ |
 | 섹션 10 | 백그라운드 작업센터 UI (`/projects/[id]/jobs`) | ✅ |
 | 섹션 9 | 외주사 서치 AI 에이전트 버튼 동작 수정 + `/vendor-search` 페이지 구현 | ✅ |
-| 배포 | GitHub push + Vercel 배포 | ✅ |
 
 ---
 
 ## 5. Git 커밋 히스토리 (최근)
 
 ```
+5b3264b feat: 모바일 반응형 - 사이드바 슬라이드 토글, 햄버거 메뉴, 백드롭 오버레이
 e414acd fix: upgrade Next.js to 15.5.18 to fix Vercel security vulnerability block
 c33e754 fix: add .npmrc for Vercel deploy (legacy-peer-deps)
 e5ee61f feat: 외주사 서치 AI 에이전트 — /vendor-search 페이지 구현, 버튼 연결
@@ -119,45 +129,45 @@ GITHUB_TOKEN=[ghp_ 토큰 저장됨]
 
 ---
 
-## 8. 로컬 서버 재시작 방법 (샌드박스)
+## 8. 샌드박스 경로 주의
+
+> ⚠️ 샌드박스는 매 세션 초기화됨. 코드는 항상 git clone으로 가져올 것
+> 실제 작업 경로: `/home/user/kimpm` (git clone 위치)
 
 ```bash
-cd /home/user/webapp
-npm run build
-pm2 restart deliveryguard-pm
-# 또는
-pm2 delete all && pm2 start ecosystem.config.cjs
+# 새 세션 시작 시
+git clone https://github.com/dreamcatcher-leo/KimPM.git /home/user/kimpm
 ```
 
 ---
 
-## 9. Vercel 재배포 방법
+## 9. GitHub push 방법
 
 ```bash
-cd /home/user/webapp
-VERCEL_TOKEN=$(grep VERCEL_TOKEN .env.local | cut -d= -f2)
-vercel deploy --prod --token=$VERCEL_TOKEN --yes
-```
-
----
-
-## 10. GitHub push 방법
-
-```bash
-cd /home/user/webapp
-# origin remote가 없을 경우:
+cd /home/user/kimpm
 GITHUB_TOKEN=$(grep GITHUB_TOKEN .env.local | cut -d= -f2)
-git remote add origin https://${GITHUB_TOKEN}@github.com/dreamcatcher-leo/KimPM.git
-
-# push
+git remote set-url origin https://${GITHUB_TOKEN}@github.com/dreamcatcher-leo/KimPM.git
 git push origin main
 ```
 
 ---
 
+## 10. Vercel 재배포 방법
+
+```bash
+cd /home/user/kimpm
+VERCEL_TOKEN=$(grep VERCEL_TOKEN .env.local | cut -d= -f2)
+vercel deploy --prod --token=$VERCEL_TOKEN --yes
+```
+
+> 💡 Vercel ↔ GitHub 자동연동 설정하면 push만으로 자동 배포 가능
+> 설정: https://vercel.com/kdh6881-8700s-projects/kimpm/settings/git
+
+---
+
 ## 11. 다음 작업 후보 (우선순위 미정)
 
-- [ ] Vercel ↔ GitHub App 연동 (Vercel 대시보드에서 GitHub 계정 연결 → 자동 배포)
+- [ ] **[우선순위 높음]** Vercel ↔ GitHub App 연동 → push만으로 자동 배포 (vercel.com/settings/git)
 - [ ] `/vendor-search` 페이지 실제 AI 검색 로직 연결 (현재 UI만 구현)
 - [ ] Supabase DB 마이그레이션 최신화 확인 (sent_at, viewed_at 컬럼)
 - [ ] Discord Webhook 실제 URL 설정
@@ -165,4 +175,4 @@ git push origin main
 
 ---
 
-*작성일: 2026-05-24 | 샌드박스 경로: /home/user/webapp*
+*최종 수정: 2026-05-24 세션6 | 실제 작업 경로: /home/user/kimpm*
