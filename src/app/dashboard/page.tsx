@@ -271,8 +271,8 @@ export default async function DashboardPage() {
                 <div className="space-y-2">
                   {/* Must-Check 항목 */}
                   {totalMustChecks > 0 && allStats.slice(0, 1).map(s => (
-                    <Link key={`mc-${s.project.id}`} href={`/projects/${s.project.id}/must-check`}>
-                      <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors cursor-pointer">
+                    <Link key={`mc-${s.project.id}`} href={`/projects/${s.project.id}/overview?tab=must-check`}>
+                      <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors cursor-pointer group">
                         <Bell className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -282,6 +282,7 @@ export default async function DashboardPage() {
                           <p className="text-xs text-purple-700 mt-0.5">
                             직접 확인하지 않으면 외주사가 기다리다 잘못된 방향으로 진행할 수 있습니다
                           </p>
+                          <p className="text-xs text-purple-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">→ 통합 결정함에서 바로 처리하기</p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
                       </div>
@@ -290,8 +291,8 @@ export default async function DashboardPage() {
 
                   {/* 의사결정 대기 */}
                   {totalDecisions > 0 && allStats.slice(0, 1).map(s => (
-                    <Link key={`dec-${s.project.id}`} href={`/projects/${s.project.id}/decisions`}>
-                      <div className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors cursor-pointer">
+                    <Link key={`dec-${s.project.id}`} href={`/projects/${s.project.id}/overview?tab=decisions`}>
+                      <div className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors cursor-pointer group">
                         <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -301,6 +302,7 @@ export default async function DashboardPage() {
                           <p className="text-xs text-orange-700 mt-0.5">
                             대표 결정이 없으면 개발이 중단되거나 외주사가 임의로 진행해 나중에 분쟁이 생깁니다
                           </p>
+                          <p className="text-xs text-orange-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">→ 통합 결정함에서 승인·반려·보류 처리하기</p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-orange-400 flex-shrink-0" />
                       </div>
@@ -309,8 +311,8 @@ export default async function DashboardPage() {
 
                   {/* 오픈 리스크 */}
                   {totalOpenRisks > 0 && allStats.slice(0, 1).map(s => (
-                    <Link key={`risk-${s.project.id}`} href={`/projects/${s.project.id}/risks`}>
-                      <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors cursor-pointer">
+                    <Link key={`risk-${s.project.id}`} href={`/projects/${s.project.id}/overview?tab=risks`}>
+                      <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors cursor-pointer group">
                         <FileWarning className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -320,6 +322,7 @@ export default async function DashboardPage() {
                           <p className="text-xs text-red-700 mt-0.5">
                             해결되지 않은 리스크가 있으면 납기일이 밀릴 가능성이 높습니다
                           </p>
+                          <p className="text-xs text-red-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">→ 통합 결정함에서 리스크 해결하기</p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-red-400 flex-shrink-0" />
                       </div>

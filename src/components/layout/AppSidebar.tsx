@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ListChecks, Calendar, FileText, AlertTriangle,
   CheckSquare, Scale, GitBranch, BarChart3, Settings, ChevronRight,
-  Bell, Plus, ShieldAlert
+  Bell, Plus, ShieldAlert, Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,12 @@ const navItems = (projectId: string) => [
     label: '일일 보고',
     href: `/projects/${projectId}/reports`,
     icon: FileText,
+  },
+  {
+    label: '통합 결정함',
+    href: `/projects/${projectId}/overview`,
+    icon: Layers,
+    badge: 'combined' as const,
   },
   {
     label: 'Must-Check',
@@ -122,6 +128,7 @@ export default function AppSidebar({
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const badgeCount = item.badge === 'mustCheck' ? pendingMustChecks
               : item.badge === 'decisions' ? pendingDecisions
+              : item.badge === 'combined' ? (pendingMustChecks + pendingDecisions)
               : 0
 
             return (

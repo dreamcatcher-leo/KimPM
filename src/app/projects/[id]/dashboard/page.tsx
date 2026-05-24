@@ -142,33 +142,39 @@ export default async function ProjectDashboard({
             <p className="text-xs text-slate-400 mt-1">완료: {featureStats.completed}건</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-slate-500 mb-1">Must-Check</p>
-            <p className={`text-3xl font-bold ${(mustCheckItems?.length || 0) > 0 ? 'text-purple-600' : 'text-slate-900'}`}>
-              {mustCheckItems?.length || 0}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">직접 확인 필요</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-slate-500 mb-1">오픈 리스크</p>
-            <p className={`text-3xl font-bold ${(openRisks?.length || 0) > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-              {openRisks?.length || 0}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">미해결</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-slate-500 mb-1">의사결정 대기</p>
-            <p className={`text-3xl font-bold ${(pendingDecisions?.length || 0) > 0 ? 'text-orange-600' : 'text-slate-900'}`}>
-              {pendingDecisions?.length || 0}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">승인/반려 필요</p>
-          </CardContent>
-        </Card>
+        <Link href={`/projects/${id}/overview?tab=must-check`}>
+          <Card className="hover:border-purple-300 hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="pt-4">
+              <p className="text-xs text-slate-500 mb-1">Must-Check</p>
+              <p className={`text-3xl font-bold ${(mustCheckItems?.length || 0) > 0 ? 'text-purple-600' : 'text-slate-900'}`}>
+                {mustCheckItems?.length || 0}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">직접 확인 필요</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/projects/${id}/overview?tab=risks`}>
+          <Card className="hover:border-red-200 hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="pt-4">
+              <p className="text-xs text-slate-500 mb-1">오픈 리스크</p>
+              <p className={`text-3xl font-bold ${(openRisks?.length || 0) > 0 ? 'text-red-600' : 'text-slate-900'}`}>
+                {openRisks?.length || 0}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">미해결</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/projects/${id}/overview?tab=decisions`}>
+          <Card className="hover:border-orange-200 hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="pt-4">
+              <p className="text-xs text-slate-500 mb-1">의사결정 대기</p>
+              <p className={`text-3xl font-bold ${(pendingDecisions?.length || 0) > 0 ? 'text-orange-600' : 'text-slate-900'}`}>
+                {pendingDecisions?.length || 0}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">승인/반려 필요</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* 주간 실행도 AI 분석 + 지연 리스크 TOP3 */}
@@ -252,7 +258,7 @@ export default async function ProjectDashboard({
                     <Bell className="w-4 h-4 text-purple-600" />
                     Must-Check
                   </CardTitle>
-                  <Link href={`/projects/${id}/must-check`}>
+                  <Link href={`/projects/${id}/overview?tab=must-check`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs">
                       Must-Check 전체 보기 <ChevronRight className="w-3 h-3" />
                     </Button>
@@ -261,13 +267,16 @@ export default async function ProjectDashboard({
               </CardHeader>
               <CardContent className="space-y-2">
                 {mustCheckItems?.slice(0, 3).map((item) => (
-                  <div key={item.id} className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg">
-                    <Bell className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-purple-900 font-medium">{item.title}</p>
-                      <p className="text-xs text-purple-600">{item.trigger_type.replace(/_/g, ' ')}</p>
+                  <Link key={item.id} href={`/projects/${id}/overview?tab=must-check&item=${item.id}`}>
+                    <div className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors cursor-pointer">
+                      <Bell className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-purple-900 font-medium">{item.title}</p>
+                        <p className="text-xs text-purple-600">{item.trigger_type.replace(/_/g, ' ')}</p>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-purple-300 flex-shrink-0 mt-1" />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </CardContent>
             </Card>
@@ -282,7 +291,7 @@ export default async function ProjectDashboard({
                     <AlertTriangle className="w-4 h-4 text-red-500" />
                     오픈 리스크
                   </CardTitle>
-                  <Link href={`/projects/${id}/risks`}>
+                  <Link href={`/projects/${id}/overview?tab=risks`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs">
                       오픈 리스크 전체 보기 <ChevronRight className="w-3 h-3" />
                     </Button>
@@ -291,12 +300,15 @@ export default async function ProjectDashboard({
               </CardHeader>
               <CardContent className="space-y-2">
                 {openRisks?.slice(0, 3).map((risk) => (
-                  <div key={risk.id} className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
-                    <Badge className={`text-xs flex-shrink-0 ${riskLevelColors[risk.level]}`}>
-                      {risk.level}
-                    </Badge>
-                    <p className="text-sm text-slate-800">{risk.title}</p>
-                  </div>
+                  <Link key={risk.id} href={`/projects/${id}/overview?tab=risks&item=${risk.id}`}>
+                    <div className="flex items-start gap-2 p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+                      <Badge className={`text-xs flex-shrink-0 ${riskLevelColors[risk.level]}`}>
+                        {risk.level}
+                      </Badge>
+                      <p className="text-sm text-slate-800 flex-1">{risk.title}</p>
+                      <ChevronRight className="w-3 h-3 text-red-300 flex-shrink-0" />
+                    </div>
+                  </Link>
                 ))}
               </CardContent>
             </Card>
