@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import TopBar from '@/components/layout/TopBar'
-import AppSidebar from '@/components/layout/AppSidebar'
+import SidebarWrapper from '@/components/layout/SidebarWrapper'
 import type { ProjectSummary } from '@/components/layout/AppSidebar'
 import {
   Plus, ExternalLink, AlertTriangle, Bell, CheckCircle,
@@ -153,11 +152,12 @@ export default async function DashboardPage() {
   }))
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <AppSidebar projects={projectsForSidebar} />
-      <div className="flex-1 flex flex-col">
-        <TopBar profile={profile} title="전체 대시보드" />
-        <main className="flex-1 p-6 space-y-6">
+    <SidebarWrapper
+      projects={projectsForSidebar}
+      profile={profile}
+      topBarTitle="전체 대시보드"
+    >
+      <div className="flex-1 p-4 lg:p-6 space-y-6">
 
           {/* ============================================ */}
           {/* HERO SECTION: 전체 개발 진행도 대형 바 */}
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
               </div>
 
               {/* 3개 지표 큰 숫자 */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                 {/* 전체 진행도 */}
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                   <div className="text-xs text-slate-400 mb-1">전체 개발 진행도</div>
@@ -537,8 +537,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-        </main>
       </div>
-    </div>
+    </SidebarWrapper>
   )
 }

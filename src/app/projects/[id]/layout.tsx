@@ -1,7 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import AppSidebar from '@/components/layout/AppSidebar'
-import TopBar from '@/components/layout/TopBar'
+import SidebarWrapper from '@/components/layout/SidebarWrapper'
 import type { Profile, Project } from '@/types'
 import type { ProjectSummary } from '@/components/layout/AppSidebar'
 
@@ -69,21 +68,16 @@ export default async function ProjectLayout({
   )
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <AppSidebar
-        projectId={id}
-        projectName={project.name}
-        pendingMustChecks={mustChecks || 0}
-        pendingDecisions={decisions || 0}
-        pendingRisks={risks || 0}
-        projects={projectsWithCounts}
-      />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar profile={profile} />
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    <SidebarWrapper
+      projectId={id}
+      projectName={project.name}
+      pendingMustChecks={mustChecks || 0}
+      pendingDecisions={decisions || 0}
+      pendingRisks={risks || 0}
+      projects={projectsWithCounts}
+      profile={profile}
+    >
+      {children}
+    </SidebarWrapper>
   )
 }
