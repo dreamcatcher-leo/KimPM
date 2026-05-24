@@ -175,4 +175,4 @@ vercel deploy --prod --token=$VERCEL_TOKEN --yes
 
 ---
 
-*최종 수정: 2026-05-24 세션6 | 실제 작업 경로: /home/user/kimpm*
+*최종 수정: 2026-05-24 세션6 (Vercel 자동연동 완료) | 실제 작업 경로: /home/user/kimpm*
