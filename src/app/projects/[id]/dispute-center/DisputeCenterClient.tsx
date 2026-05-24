@@ -70,7 +70,7 @@ export default function DisputeCenterClient({
       ]
 
       const lines = [
-        `# DeliveryGuard PM — 분쟁 대비 패킷`,
+        `# 김PM — 분쟁 대비 패킷`,
         `생성일: ${now}`,
         `프로젝트: ${projectName} / 외주사: ${vendorName}`,
         `계약 기간: ${contractStart} ~ ${contractEnd}`,
@@ -114,7 +114,7 @@ export default function DisputeCenterClient({
         ).join('\n'),
         ``,
         `---`,
-        `이 패킷은 DeliveryGuard PM에서 자동 생성되었습니다.`,
+        `이 패킷은 김PM에서 자동 생성되었습니다.`,
         `실제 분쟁 시 원본 데이터(Supabase)를 함께 제출하세요.`,
       ]
 

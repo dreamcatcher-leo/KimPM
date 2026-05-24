@@ -84,7 +84,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           embeds: [{
-            title: '✅ DeliveryGuard PM 연결 테스트',
+            title: '✅ 김PM 연결 테스트',
             description: `**${project.name}** 프로젝트와 Discord가 성공적으로 연결되었습니다.`,
             color: 0x22c55e,
             timestamp: new Date().toISOString(),

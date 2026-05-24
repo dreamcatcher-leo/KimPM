@@ -85,7 +85,7 @@ export async function notifyDailyReport(
           inline: false,
         },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet' },
+      footer: { text: '김PM — AI 외주 개발 관리' },
       timestamp: new Date().toISOString(),
     }],
   }
@@ -142,7 +142,7 @@ export async function sendFounderBrief(
           inline: false,
         },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet — AI 보조 브리프' },
+      footer: { text: '김PM — AI 외주 개발 관리' },
       timestamp: new Date().toISOString(),
     }],
   }
@@ -185,7 +185,7 @@ export async function notifyRisk(
           inline: false,
         },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet' },
+      footer: { text: '김PM — AI 외주 개발 관리' },
       timestamp: new Date().toISOString(),
     }],
   }
@@ -222,7 +222,7 @@ export async function notifyWeeklyPlan(
           inline: false,
         },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet — 검토 후 동의 부탁드립니다' },
+      footer: { text: '김PM — 검토 후 동의 부탁드립니다' },
       timestamp: new Date().toISOString(),
     }],
   }
@@ -247,7 +247,7 @@ export async function notifyCompletion(
       fields: [
         { name: '완료한 팀', value: vendorName, inline: true },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet' },
+      footer: { text: '김PM — AI 외주 개발 관리' },
       timestamp: new Date().toISOString(),
     }],
   }
@@ -279,7 +279,7 @@ export async function notifyMustCheck(
           inline: false,
         },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet — 대표 직접 확인 필요' },
+      footer: { text: '김PM — 대표 직접 확인 필요' },
       timestamp: new Date().toISOString(),
     }],
   }
@@ -307,7 +307,7 @@ export async function notifyVendorReportReminder(
           inline: false,
         },
       ],
-      footer: { text: 'DeliveryGuard PM for BeforePet' },
+      footer: { text: '김PM — AI 외주 개발 관리' },
       timestamp: new Date().toISOString(),
     }],
   }

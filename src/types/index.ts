@@ -1,5 +1,5 @@
 // =====================================================
-// DeliveryGuard PM — TypeScript Types
+// 김PM — TypeScript Types
 // =====================================================
 
 export type UserRole = 'founder' | 'vendor' | 'admin'

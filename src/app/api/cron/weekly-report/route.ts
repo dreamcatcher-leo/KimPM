@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
             description: `📅 **${weekStart} ~ ${weekEnd}** 주간 리포트가 생성되었습니다.\n\n대시보드에서 전체 내용을 확인하세요.`,
             color: reportStats.blocked > 0 ? 0xef4444 : reportStats.at_risk > 0 ? 0xf59e0b : 0x22c55e,
             fields,
-            footer: { text: 'DeliveryGuard PM for BeforePet' },
+            footer: { text: '김PM — AI 외주 개발 관리' },
             timestamp: new Date().toISOString(),
           }],
         }

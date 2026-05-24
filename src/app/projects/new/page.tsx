@@ -277,7 +277,7 @@ export default function NewProjectPage() {
                     name="name"
                     value={basicForm.name}
                     onChange={handleBasicChange}
-                    placeholder="예: BeforePet v2.0, 쇼핑몰 리뉴얼"
+                    placeholder="예: 배달앱 MVP, 쇼핑몰 리뉴얼"
                     className={step1Errors.name ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''}
                   />
                   {step1Errors.name && <p className="text-xs text-red-500">프로젝트명을 입력해주세요</p>}
