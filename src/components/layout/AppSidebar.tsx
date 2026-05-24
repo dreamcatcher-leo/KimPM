@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ListChecks, Calendar, FileText, AlertTriangle,
   CheckSquare, Scale, GitBranch, BarChart3, Settings, ChevronRight,
-  Bell, Plus
+  Bell, Plus, ShieldAlert
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -65,6 +65,11 @@ const navItems = (projectId: string) => [
     label: '주간 리포트',
     href: `/projects/${projectId}/weekly-report`,
     icon: BarChart3,
+  },
+  {
+    label: '분쟁 대비 센터',
+    href: `/projects/${projectId}/dispute-center`,
+    icon: ShieldAlert,
   },
   {
     label: '설정',
