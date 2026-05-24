@@ -110,9 +110,14 @@ export interface Spec {
   raw_content: string | null
   approved_at: string | null
   approved_by: string | null
+  sent_at: string | null        // 외주사 전달 시각 (kimpm 확장)
+  viewed_at: string | null      // 외주사 최초 열람 시각 (kimpm 확장)
   created_at: string
   updated_at: string
 }
+
+// 기능정의서 전달 상태
+export type SpecDeliveryStatus = 'not_sent' | 'sent' | 'viewed'
 
 export interface QAChecklistItem {
   id: string

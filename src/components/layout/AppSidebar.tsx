@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ListChecks, Calendar, FileText, AlertTriangle,
   Scale, GitBranch, BarChart3, Settings, ChevronRight, ChevronDown,
   Bell, Plus, ShieldAlert, Layers, Plug, ChevronsUpDown, Folder,
-  FolderOpen, Archive, CheckCircle2, Search
+  FolderOpen, Archive, CheckCircle2, Search, Cpu
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -72,6 +72,7 @@ const navItems = (projectId: string) => [
   { label: '변경 요청', href: `/projects/${projectId}/change-requests`, icon: GitBranch, section: 'main' },
   { label: '주간 리포트', href: `/projects/${projectId}/weekly-report`, icon: BarChart3, section: 'main' },
   { label: '분쟁 대비 센터', href: `/projects/${projectId}/dispute-center`, icon: ShieldAlert, section: 'main' },
+  { label: '작업센터', href: `/projects/${projectId}/jobs`, icon: Cpu, section: 'main' },
   { label: '설정', href: `/projects/${projectId}/settings`, icon: Settings, section: 'main' },
 ]
 
