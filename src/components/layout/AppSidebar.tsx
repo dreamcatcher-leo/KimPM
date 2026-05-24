@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
@@ -106,6 +106,15 @@ export default function AppSidebar({
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [projectFilter, setProjectFilter] = useState<'all' | 'active' | 'archived'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const combinedCount = pendingMustChecks + pendingDecisions + pendingRisks
 
@@ -143,16 +152,10 @@ export default function AppSidebar({
 
       {/* ── 사이드바 본체 ── */}
       <aside
-        className={cn(
-          // 기본 레이아웃
-          'w-64 bg-slate-900 min-h-screen flex flex-col border-r border-slate-800',
-          // 데스크톱: 항상 표시
-          'lg:relative lg:translate-x-0 lg:flex',
-          // 모바일: fixed + 슬라이드 애니메이션
-          'fixed top-0 left-0 z-40 h-full transition-transform duration-300 ease-in-out',
-          isOpen ? 'translate-x-0' : '-translate-x-full',
-          'lg:translate-x-0'
-        )}
+        className="w-64 bg-slate-900 min-h-screen flex flex-col border-r border-slate-800 fixed top-0 left-0 z-40 h-full transition-transform duration-300 ease-in-out lg:relative"
+        style={{
+          transform: isDesktop ? 'translateX(0)' : isOpen ? 'translateX(0)' : 'translateX(-100%)',
+        }}
       >
         {/* ── 로고 ── */}
         <div className="p-4 border-b border-slate-800 flex-shrink-0">
