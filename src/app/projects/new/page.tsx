@@ -731,7 +731,13 @@ export default function NewProjectPage() {
                   </div>
                 ))}
               </div>
-              <Button className="bg-white text-purple-900 hover:bg-purple-50 font-semibold gap-2">
+              <Button
+                className="bg-white text-purple-900 hover:bg-purple-50 font-semibold gap-2"
+                onClick={() => {
+                  const summary = analysisResult?.core_value || reqForm.one_line || ''
+                  router.push(`/vendor-search?from=new&summary=${encodeURIComponent(summary)}`)
+                }}
+              >
                 <Sparkles className="w-4 h-4" />
                 외주사 서치 시작하기
               </Button>
