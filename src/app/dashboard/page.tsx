@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import TopBar from '@/components/layout/TopBar'
 import AppSidebar from '@/components/layout/AppSidebar'
+import type { ProjectSummary } from '@/components/layout/AppSidebar'
 import {
   Plus, ExternalLink, AlertTriangle, Bell, CheckCircle,
   Clock, TrendingUp, TrendingDown, Minus, Activity, Zap,
@@ -141,9 +142,19 @@ export default async function DashboardPage() {
 
   const activeProjects = allStats.map(s => s.project)
 
+  // 사이드바 스위처용 데이터 변환
+  const projectsForSidebar: ProjectSummary[] = projectStats.map(s => ({
+    id: s.project.id,
+    name: s.project.name,
+    status: s.project.status,
+    mustChecks: s.mustChecks,
+    decisions: s.decisions,
+    risks: s.openRisks,
+  }))
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <AppSidebar />
+      <AppSidebar projects={projectsForSidebar} />
       <div className="flex-1 flex flex-col">
         <TopBar profile={profile} title="전체 대시보드" />
         <main className="flex-1 p-6 space-y-6">

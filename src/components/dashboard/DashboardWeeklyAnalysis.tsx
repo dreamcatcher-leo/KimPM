@@ -41,15 +41,39 @@ interface Props {
   projectName: string
 }
 
+// ─── localStorage 캐시 키 헬퍼 ───────────────────────────────────────────────
+function getCacheKey(projectId: string) {
+  const today = new Date().toISOString().split('T')[0]
+  return `kimpm_weekly_analysis_${projectId}_${today}`
+}
+
 export default function DashboardWeeklyAnalysis({ projectId, projectName }: Props) {
   const [analysis, setAnalysis] = useState<WeeklyAnalysis | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [isCached, setIsCached] = useState(false)
 
-  const fetchAnalysis = useCallback(async () => {
+  const fetchAnalysis = useCallback(async (forceRefresh = false) => {
+    // 당일 캐시 확인
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(getCacheKey(projectId))
+        if (cached) {
+          const { data, savedAt } = JSON.parse(cached)
+          setAnalysis(data)
+          setLastUpdated(new Date(savedAt))
+          setIsCached(true)
+          return
+        }
+      } catch {
+        // 캐시 파싱 실패 시 무시하고 새로 생성
+      }
+    }
+
     setIsLoading(true)
     setError(null)
+    setIsCached(false)
     try {
       const res = await fetch('/api/projects/weekly-analysis', {
         method: 'POST',
@@ -59,7 +83,14 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
       if (!res.ok) throw new Error('분석 요청 실패')
       const data = await res.json()
       setAnalysis(data)
-      setLastUpdated(new Date())
+      const now = new Date()
+      setLastUpdated(now)
+      // 당일 캐시 저장
+      try {
+        localStorage.setItem(getCacheKey(projectId), JSON.stringify({ data, savedAt: now.toISOString() }))
+      } catch {
+        // localStorage 저장 실패 무시
+      }
     } catch (e) {
       setError('주간 분석 로딩 실패. 재시도해주세요.')
     } finally {
@@ -68,7 +99,7 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
   }, [projectId])
 
   useEffect(() => {
-    fetchAnalysis()
+    fetchAnalysis(false)
   }, [fetchAnalysis])
 
   const riskLevelConfig = {
@@ -101,18 +132,22 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
             <div className="flex items-center gap-2">
               {lastUpdated && (
                 <span className="text-xs text-slate-400">
-                  {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 분석
+                  {isCached ? '캐시됨 · ' : ''}{lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
+              )}
+              {isCached && (
+                <span className="text-xs bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded">일별 1회</span>
               )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={fetchAnalysis}
+                onClick={() => fetchAnalysis(true)}
                 disabled={isLoading}
-                className="h-7 gap-1 text-slate-500"
+                className="h-7 gap-1 text-slate-500 hover:text-blue-400"
+                title="수동 재분석 (추가 AI 토큰 사용)"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? '분석 중...' : '새로고침'}
+                {isLoading ? '분석 중...' : isCached ? '수동 재분석' : '새로고침'}
               </Button>
             </div>
           </div>
@@ -131,7 +166,7 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
           {error && (
             <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
               <span className="text-sm text-red-600">{error}</span>
-              <Button variant="ghost" size="sm" onClick={fetchAnalysis} className="text-red-600 h-7">재시도</Button>
+              <Button variant="ghost" size="sm" onClick={() => fetchAnalysis()} className="text-red-600 h-7">재시도</Button>
             </div>
           )}
 
