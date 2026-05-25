@@ -37,6 +37,12 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
+  // vendor 토큰 경로: 로그인 없이 접근 가능 (토큰 자체가 인증)
+  // /vendor/[token] 또는 /vendor/[token]/report 등 하위 경로 모두 허용
+  if (pathname.match(/^\/vendor\/[^/]+(?:\/.*)?$/) && !pathname.startsWith('/vendor/home')) {
+    return supabaseResponse
+  }
+
   // Auth 라우트 처리
   if (pathname.startsWith('/auth/')) {
     // 이미 로그인된 경우 role 기반 리디렉션
