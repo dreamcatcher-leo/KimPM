@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ListChecks, Calendar, FileText, AlertTriangle,
   Scale, GitBranch, BarChart3, Settings, ChevronRight, ChevronDown,
   Bell, Plus, ShieldAlert, Layers, Plug, ChevronsUpDown, Folder,
-  FolderOpen, Archive, CheckCircle2, Search, Cpu, X, KeyRound
+  FolderOpen, Archive, CheckCircle2, Search, Cpu, X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -486,17 +486,6 @@ export default function AppSidebar({
               </div>
             </Link>
           )}
-
-          {/* API 키 관리 */}
-          <Link href="/admin/env-update" onClick={handleNavClick}>
-            <div className={cn(
-              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition-colors text-sm',
-              pathname === '/admin/env-update' && 'bg-slate-800 text-slate-300'
-            )}>
-              <KeyRound className="w-4 h-4" />
-              <span className="flex-1">API 키 관리</span>
-            </div>
-          </Link>
 
           {/* 버전 */}
           <div className="pt-1.5 border-t border-slate-800/50">
