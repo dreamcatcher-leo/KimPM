@@ -57,8 +57,8 @@ export default async function VendorHomePage({
     { href: `report`, label: '일일 보고', icon: Send, color: 'bg-blue-600 hover:bg-blue-500', desc: '30초 안에 완료', urgent: !todayReport },
     { href: `specs`, label: '기능 정의서', icon: BookOpen, color: 'bg-slate-700 hover:bg-slate-600', desc: `승인된 ${features?.length || 0}개` },
     { href: `questions`, label: '질문 등록', icon: MessageSquare, color: 'bg-slate-700 hover:bg-slate-600', desc: '궁금한 점 남기기' },
-    { href: `change-request`, label: '변경 요청', icon: GitBranch, color: 'bg-slate-700 hover:bg-slate-600', desc: '범위/일정 변경' },
-    { href: `completion`, label: '완료 제출', icon: CheckSquare, color: 'bg-green-600 hover:bg-green-500', desc: '기능 완료 보고' },
+    { href: `change-request`, label: '범위 변경 요청', icon: GitBranch, color: 'bg-slate-700 hover:bg-slate-600', desc: '범위·일정 변경 승인' },
+    { href: `completion`, label: '개발 완료 신청', icon: CheckSquare, color: 'bg-green-600 hover:bg-green-500', desc: '완료 후 대표 검수 요청' },
   ]
 
   return (

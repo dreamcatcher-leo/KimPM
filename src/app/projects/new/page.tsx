@@ -161,8 +161,13 @@ export default function NewProjectPage() {
 
   // ─── AI 분석 실행 ─────────────────────────────────────────────────────────────
   const runAnalysis = async () => {
+    setReqTouched(true)
     if (!reqForm.one_line && !reqForm.must_have && !reqForm.core_problem) {
       toast.error('최소 하나 이상 입력해주세요 (서비스 설명, 핵심 기능, 또는 핵심 문제)')
+      return
+    }
+    if (reqForm.one_line.length > ONE_LINE_MAX || reqForm.must_have.length > MUST_HAVE_MAX || reqForm.core_problem.length > CORE_PROBLEM_MAX) {
+      toast.error('입력이 너무 깁니다. 글자수 제한을 확인해주세요.')
       return
     }
     setIsAnalyzing(true)
@@ -221,7 +226,10 @@ export default function NewProjectPage() {
 
   // ─── 프로젝트 생성 ────────────────────────────────────────────────────────────
   const createProject = async () => {
-    if (!startMode) { toast.error('시작 방식을 선택해주세요'); return }
+    if (!startMode) {
+      toast.error('시작 방식을 선택해주세요', { description: '위에서 AI 제안 / 템플릿 / 빈 프로젝트 중 하나를 선택해주세요' })
+      return
+    }
     setIsCreating(true)
     try {
       const selectedFeatures = analysisResult?.features.filter(f => f.selected) || []
@@ -259,11 +267,28 @@ export default function NewProjectPage() {
     : step1Valid
 
   const [step1Touched, setStep1Touched] = useState(false)
+  // 날짜 순서 검증: 시작일이 종료일보다 이후인 경우
+  const dateOrderError = step1Touched && basicForm.contract_start && basicForm.contract_end
+    && basicForm.contract_start > basicForm.contract_end
+
   const step1Errors = {
     name: step1Touched && !basicForm.name.trim(),
     vendor_name: step1Touched && vendorDecided && !basicForm.vendor_name.trim(),
-    contract_start: step1Touched && !basicForm.contract_start,
-    contract_end: step1Touched && !basicForm.contract_end,
+    contract_start: step1Touched && (!basicForm.contract_start || !!dateOrderError),
+    contract_end: step1Touched && (!basicForm.contract_end || !!dateOrderError),
+  }
+
+  // Step 2 요구사항 글자수 제한
+  const ONE_LINE_MAX = 100
+  const MUST_HAVE_MAX = 2000
+  const CORE_PROBLEM_MAX = 500
+  const [reqTouched, setReqTouched] = useState(false)
+  const reqErrors = {
+    one_line_too_short: reqTouched && reqForm.one_line.trim().length > 0 && reqForm.one_line.trim().length < 5,
+    one_line_too_long: reqForm.one_line.length > ONE_LINE_MAX,
+    must_have_too_short: reqTouched && reqForm.must_have.trim().length > 0 && reqForm.must_have.trim().length < 20,
+    must_have_too_long: reqForm.must_have.length > MUST_HAVE_MAX,
+    core_problem_too_long: reqForm.core_problem.length > CORE_PROBLEM_MAX,
   }
 
   const handleNextFromStep1 = () => {
@@ -376,8 +401,9 @@ export default function NewProjectPage() {
               <ul className="mt-1 text-xs space-y-0.5">
                 {step1Errors.name && <li>• 프로젝트명이 비어있습니다</li>}
                 {step1Errors.vendor_name && <li>• 외주사명이 비어있습니다</li>}
-                {step1Errors.contract_start && <li>• 계약 시작일이 선택되지 않았습니다</li>}
-                {step1Errors.contract_end && <li>• 계약 종료일이 선택되지 않았습니다</li>}
+                {step1Errors.contract_start && !dateOrderError && <li>• {vendorDecided ? '계약 시작일' : '개발 시작 예정일'}이 선택되지 않았습니다</li>}
+                {step1Errors.contract_end && !dateOrderError && <li>• {vendorDecided ? '계약 종료일' : '목표 완료일'}이 선택되지 않았습니다</li>}
+                {dateOrderError && <li>• 시작일이 종료일보다 늦습니다. 날짜를 확인해주세요</li>}
               </ul>
             </div>
           </div>
@@ -421,26 +447,59 @@ export default function NewProjectPage() {
             </CardContent>
           </Card>
 
-          {/* 계약 정보 */}
+          {/* 계약/일정 정보 — vendorDecided 여부에 따라 워딩 분기 */}
           <Card className={step1Touched && (step1Errors.contract_start || step1Errors.contract_end) ? 'border-red-200' : ''}>
-            <CardHeader><CardTitle className="text-base">계약 기간 및 예산</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {vendorDecided ? '계약 기간 및 예산' : '개발 일정 및 예산'}
+              </CardTitle>
+              {!vendorDecided && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  외주사 계약 후 실제 일정이 확정되면 수정할 수 있습니다
+                </p>
+              )}
+            </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>계약 시작일 <span className="text-red-500">*</span></Label>
+                  <Label>
+                    {vendorDecided ? '계약 시작일' : '개발 시작 예정일'}
+                    <span className="text-red-500"> *</span>
+                  </Label>
                   <Input type="date" name="contract_start" value={basicForm.contract_start} onChange={handleBasicChange}
                     className={step1Errors.contract_start ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''} />
+                  {step1Errors.contract_start && !dateOrderError && (
+                    <p className="text-xs text-red-500">날짜를 선택해주세요</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>계약 종료일 <span className="text-red-500">*</span></Label>
+                  <Label>
+                    {vendorDecided ? '계약 종료일' : '목표 완료일'}
+                    <span className="text-red-500"> *</span>
+                  </Label>
                   <Input type="date" name="contract_end" value={basicForm.contract_end} onChange={handleBasicChange}
                     className={step1Errors.contract_end ? 'border-red-400 focus:ring-red-400 bg-red-50' : ''} />
+                  {step1Errors.contract_end && !dateOrderError && (
+                    <p className="text-xs text-red-500">날짜를 선택해주세요</p>
+                  )}
                 </div>
               </div>
+              {dateOrderError && (
+                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  시작일이 종료일보다 늦습니다. 날짜를 다시 확인해주세요.
+                </div>
+              )}
               <div className="space-y-2">
-                <Label>예상 계약 금액 (원, 선택)</Label>
+                <Label>
+                  {vendorDecided ? '예상 계약 금액' : '예상 개발 예산'}
+                  <span className="text-slate-400 text-xs ml-1">(원, 선택)</span>
+                </Label>
                 <Input type="number" name="contract_amount" value={basicForm.contract_amount} onChange={handleBasicChange}
-                  placeholder="예: 50000000 (5,000만 원)" />
+                  placeholder={vendorDecided ? '예: 50000000 (5,000만 원)' : '예: 30000000 (3,000만 원) — 대략적인 금액도 괜찮아요'} />
+                {!vendorDecided && (
+                  <p className="text-xs text-slate-400">정확하지 않아도 됩니다. 외주사 견적 후 수정 가능합니다.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -574,37 +633,77 @@ export default function NewProjectPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>만들고 싶은 서비스/제품 한 줄 설명</Label>
+                <div className="flex items-center justify-between">
+                  <Label>만들고 싶은 서비스/제품 한 줄 설명</Label>
+                  <span className={`text-xs ${reqForm.one_line.length > ONE_LINE_MAX ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
+                    {reqForm.one_line.length}/{ONE_LINE_MAX}
+                  </span>
+                </div>
                 <Input
                   name="one_line"
                   value={reqForm.one_line}
                   onChange={handleReqChange}
                   placeholder="예: 음식 배달 앱 / 소상공인 재고관리 SaaS / 독립서점 큐레이션 앱"
+                  maxLength={ONE_LINE_MAX + 20}
+                  className={reqErrors.one_line_too_long ? 'border-red-400 bg-red-50' : ''}
                 />
+                {reqErrors.one_line_too_short && (
+                  <p className="text-xs text-amber-600">조금 더 구체적으로 적어주세요 (5자 이상)</p>
+                )}
+                {reqErrors.one_line_too_long && (
+                  <p className="text-xs text-red-500">한 줄로 간결하게 줄여주세요 ({ONE_LINE_MAX}자 이내)</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>
-                  이번 개발에 필요한 전체 기능 목록
-                  <span className="text-slate-400 text-xs ml-2">줄바꿈으로 구분 · 러프하게 적어도 OK</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label>
+                    이번 개발에 필요한 전체 기능 목록
+                    <span className="text-slate-400 text-xs ml-2">줄바꿈으로 구분 · 러프하게 적어도 OK</span>
+                  </Label>
+                  <span className={`text-xs flex-shrink-0 ml-2 ${reqForm.must_have.length > MUST_HAVE_MAX ? 'text-red-500 font-semibold' : reqForm.must_have.length > MUST_HAVE_MAX * 0.8 ? 'text-amber-500' : 'text-slate-400'}`}>
+                    {reqForm.must_have.length}/{MUST_HAVE_MAX}
+                  </span>
+                </div>
                 <Textarea
                   name="must_have"
                   value={reqForm.must_have}
                   onChange={handleReqChange}
                   placeholder={"예:\n회원가입/소셜 로그인\n주소 설정 (현재 위치/검색)\n음식점 목록 & 필터\n장바구니 & 주문\n결제 (카드, 카카오페이)\n주문 상태 실시간 추적\n리뷰 & 평점\n사장님 관리 페이지\n배달 알림 (푸시)"}
                   rows={8}
+                  maxLength={MUST_HAVE_MAX + 100}
+                  className={reqErrors.must_have_too_long ? 'border-red-400 bg-red-50' : ''}
                 />
-                <p className="text-xs text-slate-400">→ AI가 P0(MVP 필수) / P1(중요) / P2(여유시 추가)로 자동 분류합니다</p>
+                {reqErrors.must_have_too_short && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    너무 짧습니다. 원하는 기능을 하나씩 줄바꿈으로 적어주세요 (20자 이상)
+                  </p>
+                )}
+                {reqErrors.must_have_too_long ? (
+                  <p className="text-xs text-red-500">너무 깁니다. 핵심 기능 위주로 줄여주세요 ({MUST_HAVE_MAX}자 이내)</p>
+                ) : (
+                  <p className="text-xs text-slate-400">→ AI가 P0(MVP 필수) / P1(중요) / P2(여유시 추가)로 자동 분류합니다</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>지금 가장 해결하고 싶은 문제</Label>
+                <div className="flex items-center justify-between">
+                  <Label>지금 가장 해결하고 싶은 문제</Label>
+                  <span className={`text-xs ${reqForm.core_problem.length > CORE_PROBLEM_MAX ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
+                    {reqForm.core_problem.length}/{CORE_PROBLEM_MAX}
+                  </span>
+                </div>
                 <Textarea
                   name="core_problem"
                   value={reqForm.core_problem}
                   onChange={handleReqChange}
                   placeholder="예: 전화 주문과 수동 배달로 운영 중. 주문 처리 자동화로 하루 3시간 단축하고 싶음."
                   rows={3}
+                  maxLength={CORE_PROBLEM_MAX + 50}
+                  className={reqErrors.core_problem_too_long ? 'border-red-400 bg-red-50' : ''}
                 />
+                {reqErrors.core_problem_too_long && (
+                  <p className="text-xs text-red-500">핵심 문제를 간결하게 요약해주세요 ({CORE_PROBLEM_MAX}자 이내)</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -986,7 +1085,7 @@ export default function NewProjectPage() {
                   {basicForm.vendor_name && ` / 외주사: ${basicForm.vendor_name}`}
                   {!basicForm.vendor_name && <span className="text-purple-600"> / 외주사 미정 (추후 연결)</span>}
                 </p>
-                <p>📅 {basicForm.contract_start} ~ {basicForm.contract_end}</p>
+                <p>📅 {vendorDecided ? '계약 기간' : '개발 일정'}: {basicForm.contract_start || '미설정'} ~ {basicForm.contract_end || '미설정'}</p>
                 {analysisResult && <p>🤖 AI 분석: {analysisResult.features.filter(f => f.selected).length}개 기능 선택됨</p>}
               </div>
             </CardContent>

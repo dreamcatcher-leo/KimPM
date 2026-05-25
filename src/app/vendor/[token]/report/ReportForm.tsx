@@ -98,12 +98,18 @@ export default function ReportForm({ projectId, accessLinkId, reportDate, featur
   const addEvidence = () =>
     setEvidenceItems(prev => [...prev, { type: '코드_증빙', title: '', content: '', url: '' }])
 
-  const isValid = selectedWorkTypes.length > 0 && summary.trim()
+  const SUMMARY_MIN = 10
+  const SUMMARY_MAX = 200
+  const summaryTooShort = summary.trim().length > 0 && summary.trim().length < SUMMARY_MIN
+  const summaryTooLong = summary.length > SUMMARY_MAX
+  const isValid = selectedWorkTypes.length > 0 && summary.trim().length >= SUMMARY_MIN && !summaryTooLong
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (selectedWorkTypes.length === 0) { toast.error('작업 유형을 하나 이상 선택해주세요'); return }
-    if (!summary.trim()) { toast.error('한 줄 요약을 입력해주세요'); return }
+    if (!summary.trim()) { toast.error('오늘 작업 요약을 입력해주세요'); return }
+    if (summary.trim().length < SUMMARY_MIN) { toast.error(`요약이 너무 짧습니다. ${SUMMARY_MIN}자 이상 입력해주세요`); return }
+    if (summaryTooLong) { toast.error(`요약이 너무 깁니다. ${SUMMARY_MAX}자 이내로 줄여주세요`); return }
 
     setIsSubmitting(true)
     try {
@@ -208,26 +214,46 @@ export default function ReportForm({ projectId, accessLinkId, reportDate, featur
       </Card>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {/* STEP 2 — 한 줄 요약 (필수) */}
+      {/* STEP 2 — 오늘 작업 한 줄 요약 (필수) */}
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <Card className={summary.trim() ? 'border-blue-200' : 'border-slate-200'}>
+      <Card className={
+        summaryTooLong ? 'border-red-300' :
+        summaryTooShort ? 'border-amber-300' :
+        summary.trim().length >= SUMMARY_MIN ? 'border-blue-200' :
+        'border-slate-200'
+      }>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            {summary.trim()
+            {summary.trim().length >= SUMMARY_MIN && !summaryTooLong
               ? <CheckCircle2 className="w-4 h-4 text-blue-600" />
               : <span className="w-4 h-4 rounded-full border-2 border-slate-300 flex-shrink-0" />}
-            오늘 가장 중요하게 한 일
+            오늘 작업 한 줄 요약
             <span className="text-red-500 font-normal">*</span>
+            <span className={`ml-auto text-xs font-normal ${summaryTooLong ? 'text-red-500 font-semibold' : summary.length > SUMMARY_MAX * 0.8 ? 'text-amber-500' : 'text-slate-400'}`}>
+              {summary.length}/{SUMMARY_MAX}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Input
             value={summary}
             onChange={e => setSummary(e.target.value)}
-            placeholder="예: P0-1 이미지 업로드 실패 원인 파악 및 핫픽스 코드 작성"
-            className="text-sm"
+            placeholder="예: P0-1 이미지 업로드 실패 원인 파악 및 핫픽스 코드 작성 완료"
+            className={`text-sm ${summaryTooLong ? 'border-red-400 bg-red-50' : summaryTooShort ? 'border-amber-300' : ''}`}
+            maxLength={SUMMARY_MAX + 20}
           />
-          <p className="text-xs text-slate-400 mt-1.5">한 문장으로, 가장 핵심적인 것 하나만 적어주세요</p>
+          {summaryTooShort && (
+            <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              너무 짧습니다. 오늘 한 일을 구체적으로 적어주세요 ({SUMMARY_MIN}자 이상)
+            </p>
+          )}
+          {summaryTooLong && (
+            <p className="text-xs text-red-500 mt-1.5">너무 깁니다. 핵심 내용만 {SUMMARY_MAX}자 이내로 줄여주세요</p>
+          )}
+          {!summaryTooShort && !summaryTooLong && (
+            <p className="text-xs text-slate-400 mt-1.5">한 문장으로, 오늘 가장 핵심적인 작업 하나만 적어주세요</p>
+          )}
         </CardContent>
       </Card>
 
@@ -237,16 +263,25 @@ export default function ReportForm({ projectId, accessLinkId, reportDate, featur
       <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
         <Label className="text-sm font-semibold text-orange-800 flex items-center gap-2 mb-2">
           <AlertTriangle className="w-4 h-4 text-orange-500" />
-          막힌 점이 있나요?
+          진행에 막힌 점이 있나요?
           <span className="font-normal text-orange-600 text-xs">없으면 비워두세요</span>
+          {blocker.length > 0 && (
+            <span className={`ml-auto text-xs font-normal ${blocker.length > 300 ? 'text-red-500 font-semibold' : 'text-orange-500'}`}>
+              {blocker.length}/300
+            </span>
+          )}
         </Label>
         <Textarea
           value={blocker}
           onChange={e => setBlocker(e.target.value)}
-          placeholder="현재 진행에 어려움이 있다면 한 줄로 설명해주세요..."
+          placeholder="진행이 막힌 기술적 문제, 대기 중인 의사결정, 필요한 리소스 등을 적어주세요..."
           rows={2}
-          className="bg-white border-orange-200 text-sm"
+          maxLength={320}
+          className={`bg-white text-sm ${blocker.length > 300 ? 'border-red-300' : 'border-orange-200'}`}
         />
+        {blocker.length > 300 && (
+          <p className="text-xs text-red-500 mt-1">300자 이내로 줄여주세요</p>
+        )}
         {blocker.trim() && (
           <div className="mt-2 flex items-center gap-2">
             <Checkbox
@@ -460,7 +495,12 @@ export default function ReportForm({ projectId, accessLinkId, reportDate, featur
         }`}
       >
         <Send className="w-4 h-4" />
-        {isSubmitting ? '제출 중...' : isValid ? '보고 제출하기' : '작업 유형과 한 줄 요약을 입력해주세요'}
+        {isSubmitting ? '제출 중...' :
+         isValid ? '오늘 보고 제출하기' :
+         selectedWorkTypes.length === 0 ? '작업 유형을 선택해주세요' :
+         summaryTooShort ? `요약을 ${SUMMARY_MIN}자 이상 입력해주세요` :
+         summaryTooLong ? `요약을 ${SUMMARY_MAX}자 이내로 줄여주세요` :
+         '오늘 작업 요약을 입력해주세요'}
       </Button>
 
       <p className="text-xs text-slate-400 text-center">

@@ -70,8 +70,8 @@ export default async function VendorHomePage() {
     { href: `/vendor/${token}/specs`, label: '기능 정의서', icon: BookOpen },
     { href: `/vendor/${token}/report`, label: '일일 보고', icon: Send },
     { href: `/vendor/${token}/questions`, label: '협의 기록', icon: MessageSquare },
-    { href: `/vendor/${token}/change-request`, label: '변경 요청', icon: GitBranch },
-    { href: `/vendor/${token}/completion`, label: '완료 제출', icon: CheckSquare },
+    { href: `/vendor/${token}/change-request`, label: '범위 변경', icon: GitBranch },
+    { href: `/vendor/${token}/completion`, label: '완료 신청', icon: CheckSquare },
     { href: `/vendor/${token}/evidence`, label: '증빙자료', icon: FileText },
   ]
 
@@ -197,15 +197,15 @@ export default async function VendorHomePage() {
                 <div className={`text-2xl font-bold ${pendingApprovalCount > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{pendingApprovalCount}</div>
                 <div className="text-xs text-slate-500 mt-0.5">대표 확인 대기</div>
               </div>
-              {/* 변경 요청 진행 중 */}
+              {/* 범위 변경 진행 중 */}
               <div className={`rounded-xl border p-3 text-center ${changeRequestCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
                 <div className={`text-2xl font-bold ${changeRequestCount > 0 ? 'text-red-600' : 'text-slate-400'}`}>{changeRequestCount}</div>
-                <div className="text-xs text-slate-500 mt-0.5">변경 요청 처리 중</div>
+                <div className="text-xs text-slate-500 mt-0.5">범위 변경 검토 중</div>
               </div>
               {/* 진행 중 기능 */}
               <div className="bg-white rounded-xl border border-blue-100 p-3 text-center">
                 <div className="text-2xl font-bold text-blue-600">{inProgressFeatures.length}</div>
-                <div className="text-xs text-slate-500 mt-0.5">완료 제출 가능</div>
+                <div className="text-xs text-slate-500 mt-0.5">완료 신청 가능</div>
               </div>
             </div>
 
@@ -230,8 +230,8 @@ export default async function VendorHomePage() {
             <div className="mt-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
               <p className="text-xs text-indigo-700 flex items-start gap-1">
                 <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                변경 요청 없이 합의 범위를 벗어난 작업을 시작하면 예산/일정 분쟁이 생길 수 있습니다.
-                범위 외 작업은 반드시 변경 요청을 먼저 등록하세요.
+                범위 변경 요청 없이 합의 범위 밖의 작업을 시작하면 예산·일정 분쟁이 생길 수 있습니다.
+                범위 외 작업은 반드시 대표 승인 후 착수해 주세요.
               </p>
             </div>
           </CardContent>
@@ -413,13 +413,13 @@ export default async function VendorHomePage() {
           </Card>
         )}
 
-        {/* 변경 요청 현황 */}
+        {/* 범위 변경 요청 현황 */}
         {(openChangeRequests || []).length > 0 && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <GitBranch className="w-4 h-4 text-orange-500" />
-                처리 중인 변경 요청
+                검토 중인 범위 변경 요청
                 <Badge className="bg-orange-100 text-orange-700 text-xs">{(openChangeRequests || []).length}건</Badge>
                 <Badge className="bg-yellow-100 text-yellow-700 border border-yellow-200 text-xs ml-auto">예산 영향 가능</Badge>
               </CardTitle>
@@ -447,8 +447,8 @@ export default async function VendorHomePage() {
           {[
             { href: `/vendor/${token}/report`, icon: Send, label: '일일 보고', color: 'text-blue-600 bg-blue-50', badge: null },
             { href: `/vendor/${token}/questions`, icon: MessageSquare, label: '협의 기록', color: 'text-purple-600 bg-purple-50', badge: null },
-            { href: `/vendor/${token}/change-request`, icon: GitBranch, label: '변경 요청', color: 'text-orange-600 bg-orange-50', badge: changeRequestCount > 0 ? changeRequestCount : null },
-            { href: `/vendor/${token}/completion`, icon: CheckSquare, label: '완료 제출', color: 'text-green-600 bg-green-50', badge: null },
+            { href: `/vendor/${token}/change-request`, icon: GitBranch, label: '범위 변경', color: 'text-orange-600 bg-orange-50', badge: changeRequestCount > 0 ? changeRequestCount : null },
+            { href: `/vendor/${token}/completion`, icon: CheckSquare, label: '완료 신청', color: 'text-green-600 bg-green-50', badge: null },
           ].map(({ href, icon: Icon, label, color, badge }) => (
             <Link key={href} href={href}>
               <div className="relative flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer">

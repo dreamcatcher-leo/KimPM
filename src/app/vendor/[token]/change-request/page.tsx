@@ -35,7 +35,7 @@ export default function VendorChangeRequestPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success('변경 요청이 제출되었습니다. 대표가 검토 후 회신드립니다.')
+      toast.success('범위 변경 요청이 제출되었습니다. 대표가 검토 후 승인/반려를 회신드립니다.')
       router.push(`/vendor/${params.token}`)
     } catch (err) {
       toast.error('제출 실패')
@@ -52,12 +52,12 @@ export default function VendorChangeRequestPage() {
     <div>
       <h1 className="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
         <GitBranch className="w-5 h-5" />
-        변경 요청
+        범위 변경 요청
       </h1>
-      <p className="text-sm text-slate-500 mb-2">개발 범위나 일정 변경이 필요한 경우 요청해 주세요</p>
+      <p className="text-sm text-slate-500 mb-2">개발 범위·일정 변경이 필요할 때 대표에게 먼저 승인을 받으세요</p>
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-6">
         <p className="text-xs text-amber-700">
-          ⚠️ 변경 요청은 대표 승인 전까지 실제 개발 범위에 반영되지 않습니다.
+          ⚠️ 승인 전에 범위 밖의 작업을 시작하면 비용·일정 분쟁이 생길 수 있습니다. 반드시 승인 후 착수해 주세요.
         </p>
       </div>
 
@@ -98,7 +98,7 @@ export default function VendorChangeRequestPage() {
             </div>
             <Button type="submit" disabled={isSubmitting} className="w-full gap-2 bg-blue-600 hover:bg-blue-500">
               <Send className="w-4 h-4" />
-              {isSubmitting ? '제출 중...' : '변경 요청 제출'}
+              {isSubmitting ? '제출 중...' : '범위 변경 요청 제출'}
             </Button>
           </CardContent>
         </Card>

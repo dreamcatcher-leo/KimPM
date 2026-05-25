@@ -24,13 +24,13 @@ const categoryLabels: Record<string, string> = {
 }
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  planning:           { label: '정의서 필요', color: 'bg-gray-100 text-gray-600' },
-  spec_draft:         { label: '초안 생성됨', color: 'bg-yellow-100 text-yellow-700' },
-  spec_approved:      { label: '정의서 승인', color: 'bg-blue-100 text-blue-700' },
-  in_progress:        { label: '개발 중',    color: 'bg-purple-100 text-purple-700' },
-  completed_candidate: { label: '완료 후보', color: 'bg-orange-100 text-orange-700' },
-  approved:           { label: '완료 승인',  color: 'bg-green-100 text-green-700' },
-  on_hold:            { label: '보류',       color: 'bg-red-100 text-red-600' },
+  planning:           { label: '기획서 미작성',    color: 'bg-gray-100 text-gray-600' },
+  spec_draft:         { label: 'AI 초안 완성',     color: 'bg-yellow-100 text-yellow-700' },
+  spec_approved:      { label: '기획서 확정',      color: 'bg-blue-100 text-blue-700' },
+  in_progress:        { label: '개발 중',          color: 'bg-purple-100 text-purple-700' },
+  completed_candidate: { label: '완료 검수 요청', color: 'bg-orange-100 text-orange-700' },
+  approved:           { label: '개발 완료 승인',   color: 'bg-green-100 text-green-700' },
+  on_hold:            { label: '보류',             color: 'bg-red-100 text-red-600' },
 }
 
 const PRIORITY_GROUPS: PriorityGroup[] = ['P0', 'P1', 'P2', 'P3']
@@ -143,8 +143,8 @@ export default function FeaturesClient({ projectId, initialFeatures }: FeaturesC
       if (!res.ok) throw new Error(data.error)
       setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, status: 'spec_draft' } : f))
       setGenStatus(prev => ({ ...prev, [featureId]: 'done' }))
-      if (data.isFallback) toast.info(`${featureName} — 기본 템플릿으로 생성됨`)
-      else toast.success(`${featureName} 정의서 생성 완료`)
+      if (data.isFallback) toast.info(`${featureName} — 기본 템플릿으로 초안 생성됨`)
+      else toast.success(`${featureName} AI 기획서 초안 생성 완료`)
     } catch (err) {
       setGenStatus(prev => ({ ...prev, [featureId]: 'error' }))
       toast.error(err instanceof Error ? err.message : '생성 실패')
@@ -174,8 +174,8 @@ export default function FeaturesClient({ projectId, initialFeatures }: FeaturesC
       await new Promise(r => setTimeout(r, 500))
     }
     setIsBulkGenerating(false)
-    if (errorCount === 0) toast.success(`전체 ${targets.length}개 정의서 초안 생성 완료!`)
-    else toast.warning(`${targets.length - errorCount}개 성공, ${errorCount}개 실패`)
+    if (errorCount === 0) toast.success(`전체 ${targets.length}개 AI 기획서 초안 생성 완료!`)
+    else toast.warning(`${targets.length - errorCount}개 생성 완료, ${errorCount}개 실패 — 실패한 기능은 개별 재시도해주세요`)
   }
 
   return (
@@ -186,7 +186,7 @@ export default function FeaturesClient({ projectId, initialFeatures }: FeaturesC
           <h2 className="text-xl font-bold text-slate-900">기능 목록</h2>
           <p className="text-sm text-slate-500 mt-0.5">
             총 {features.length}개
-            {planningCount > 0 && <span className="text-amber-600 ml-1">· 정의서 필요 {planningCount}개</span>}
+            {planningCount > 0 && <span className="text-amber-600 ml-1">· 기획서 미작성 {planningCount}개</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -226,8 +226,8 @@ export default function FeaturesClient({ projectId, initialFeatures }: FeaturesC
             >
               <Layers className="w-3.5 h-3.5" />
               {isBulkGenerating
-                ? `생성 중 ${bulkProgress.done}/${bulkProgress.total}`
-                : `정의서 일괄 생성 (${planningCount}개)`}
+                ? `AI 초안 생성 중 ${bulkProgress.done}/${bulkProgress.total}`
+                : `AI 기획서 일괄 생성 (${planningCount}개)`}
             </Button>
           )}
           <Link href={`/projects/${projectId}/features/new`}>
@@ -242,7 +242,7 @@ export default function FeaturesClient({ projectId, initialFeatures }: FeaturesC
       {isBulkGenerating && (
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="flex justify-between text-xs text-blue-700 mb-1">
-            <span>전체 기능 정의서 생성 중...</span>
+            <span>AI 기획서 초안 생성 중...</span>
             <span>{bulkProgress.done} / {bulkProgress.total}</span>
           </div>
           <div className="w-full bg-blue-200 rounded-full h-1.5">
