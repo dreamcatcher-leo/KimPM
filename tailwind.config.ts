@@ -48,6 +48,16 @@ const config: Config = {
     },
   },
   plugins: [],
+  safelist: [
+    'lg:relative',
+    'lg:top-auto',
+    'lg:left-auto',
+    'lg:h-auto',
+    'lg:min-h-screen',
+    'lg:translate-x-0',
+    '-translate-x-full',
+    'translate-x-0',
+  ],
 }
 
 export default config

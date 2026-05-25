@@ -106,15 +106,7 @@ export default function AppSidebar({
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [projectFilter, setProjectFilter] = useState<'all' | 'active' | 'archived'>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [isDesktop, setIsDesktop] = useState(false)
 
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    setIsDesktop(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
 
   const combinedCount = pendingMustChecks + pendingDecisions + pendingRisks
 
@@ -152,11 +144,14 @@ export default function AppSidebar({
 
       {/* ── 사이드바 본체 ── */}
       <aside
-        className="w-64 bg-slate-900 min-h-screen flex flex-col border-r border-slate-800 top-0 left-0 z-40 h-full transition-transform duration-300 ease-in-out"
-        style={{
-          position: isDesktop ? 'relative' : 'fixed',
-          transform: isDesktop ? 'translateX(0)' : isOpen ? 'translateX(0)' : 'translateX(-100%)',
-        }}
+        className={cn(
+          'w-64 bg-slate-900 flex flex-col border-r border-slate-800 z-40 transition-transform duration-300 ease-in-out',
+          // 데스크톱: relative로 흐름에 자연스럽게 포함, 모바일: fixed로 슬라이드
+          'fixed top-0 left-0 h-screen',
+          'lg:relative lg:top-auto lg:left-auto lg:h-auto lg:min-h-screen',
+          // 모바일 열림/닫힘
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        )}
       >
         {/* ── 로고 ── */}
         <div className="p-4 border-b border-slate-800 flex-shrink-0">
