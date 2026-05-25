@@ -100,7 +100,9 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
         // localStorage 저장 실패 무시
       }
     } catch (e) {
-      setError('주간 분석 로딩 실패. 재시도해주세요.')
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[WeeklyAnalysis] fetch error:', msg)
+      setError(`주간 분석 로딩 실패: ${msg}`)
     } finally {
       setIsLoading(false)
     }
