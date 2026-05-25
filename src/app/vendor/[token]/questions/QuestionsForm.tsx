@@ -33,6 +33,11 @@ interface QuestionsFormProps {
   token: string
 }
 
+const QUESTION_MIN = 10
+const QUESTION_MAX = 500
+const CONTEXT_MAX = 300
+const ASSUMPTION_MAX = 200
+
 const QUESTION_TYPES = [
   { value: '정책', label: '정책 — 비즈니스 규칙/운영 방침' },
   { value: '방향', label: '방향 — 기술적/UX 방향 결정' },
@@ -69,6 +74,7 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
   const [questions, setQuestions] = useState(existingQuestions)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [questionTouched, setQuestionTouched] = useState(false)
   const [form, setForm] = useState({
     question: '',
     context: '',
@@ -79,10 +85,27 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
     default_assumption: '',
   })
 
+  // 유효성 상태
+  const questionLen = form.question.trim().length
+  const questionTooShort = questionTouched && questionLen > 0 && questionLen < QUESTION_MIN
+  const questionTooLong = form.question.length > QUESTION_MAX
+  const contextTooLong = form.context.length > CONTEXT_MAX
+  const assumptionTooLong = form.default_assumption.length > ASSUMPTION_MAX
+  const isFormValid = questionLen >= QUESTION_MIN && !questionTooLong && !contextTooLong && !assumptionTooLong
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setQuestionTouched(true)
     if (!form.question.trim()) {
-      toast.error('질문 내용을 입력해주세요')
+      toast.error('협의 내용을 입력해주세요')
+      return
+    }
+    if (questionLen < QUESTION_MIN) {
+      toast.error(`너무 짧습니다. ${QUESTION_MIN}자 이상 입력해주세요`)
+      return
+    }
+    if (questionTooLong) {
+      toast.error(`협의 내용은 ${QUESTION_MAX}자 이내로 줄여주세요`)
       return
     }
     setIsSubmitting(true)
@@ -114,6 +137,7 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
         schedule_impact: '없음',
         default_assumption: '',
       })
+      setQuestionTouched(false)
       setShowAdvanced(false)
       toast.success('협의 요청이 등록되었습니다')
     } catch {
@@ -165,25 +189,68 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
 
             {/* 질문 본문 */}
             <div className="space-y-2">
-              <Label>협의 내용 <span className="text-red-500">*</span></Label>
+              <div className="flex items-center justify-between">
+                <Label>협의 내용 <span className="text-red-500">*</span></Label>
+                <span className={`text-xs font-mono ${
+                  questionTooLong ? 'text-red-500 font-semibold' :
+                  form.question.length > QUESTION_MAX * 0.85 ? 'text-amber-500' :
+                  'text-slate-400'
+                }`}>
+                  {form.question.length}/{QUESTION_MAX}
+                </span>
+              </div>
               <Textarea
                 value={form.question}
                 onChange={e => setForm(p => ({ ...p, question: e.target.value }))}
+                onBlur={() => setQuestionTouched(true)}
                 placeholder="대표에게 확인이 필요한 내용을 적어주세요. 예) 결제 실패 시 재시도 횟수는 몇 회로 할까요?"
                 rows={3}
-                required
+                maxLength={QUESTION_MAX + 10}
+                className={questionTooShort ? 'border-amber-400' : questionTooLong ? 'border-red-400 bg-red-50' : ''}
               />
+              {questionTooShort && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  너무 짧습니다. 구체적으로 {QUESTION_MIN}자 이상 작성해주세요
+                </p>
+              )}
+              {questionTooLong && (
+                <p className="text-xs text-red-500">
+                  {QUESTION_MAX}자 이내로 줄여주세요
+                </p>
+              )}
+              {!questionTouched && !form.question && (
+                <p className="text-xs text-slate-400">
+                  구체적일수록 빠른 답변을 받을 수 있어요 (최소 {QUESTION_MIN}자)
+                </p>
+              )}
             </div>
 
             {/* 배경/맥락 */}
             <div className="space-y-2">
-              <Label>배경/맥락 <span className="text-slate-400 text-xs">(선택)</span></Label>
+              <div className="flex items-center justify-between">
+                <Label>배경/맥락 <span className="text-slate-400 text-xs">(선택)</span></Label>
+                {form.context.length > 0 && (
+                  <span className={`text-xs font-mono ${
+                    contextTooLong ? 'text-red-500 font-semibold' :
+                    form.context.length > CONTEXT_MAX * 0.85 ? 'text-amber-500' :
+                    'text-slate-400'
+                  }`}>
+                    {form.context.length}/{CONTEXT_MAX}
+                  </span>
+                )}
+              </div>
               <Textarea
                 value={form.context}
                 onChange={e => setForm(p => ({ ...p, context: e.target.value }))}
                 placeholder="질문의 배경이나 현재 시도한 것들..."
                 rows={2}
+                maxLength={CONTEXT_MAX + 10}
+                className={contextTooLong ? 'border-red-400 bg-red-50' : ''}
               />
+              {contextTooLong && (
+                <p className="text-xs text-red-500">{CONTEXT_MAX}자 이내로 줄여주세요</p>
+              )}
             </div>
 
             {/* 고급 필드 — 접기/펼치기 */}
@@ -228,14 +295,32 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
 
                 {/* 기본 가정 */}
                 <div className="space-y-2">
-                  <Label className="text-sm">답변 없을 경우 기본 가정</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">답변 없을 경우 기본 가정</Label>
+                    {form.default_assumption.length > 0 && (
+                      <span className={`text-xs font-mono ${
+                        assumptionTooLong ? 'text-red-500 font-semibold' :
+                        form.default_assumption.length > ASSUMPTION_MAX * 0.85 ? 'text-amber-500' :
+                        'text-slate-400'
+                      }`}>
+                        {form.default_assumption.length}/{ASSUMPTION_MAX}
+                      </span>
+                    )}
+                  </div>
                   <Textarea
                     value={form.default_assumption}
                     onChange={e => setForm(p => ({ ...p, default_assumption: e.target.value }))}
                     placeholder="예) 답변이 없으면 재시도 3회로 구현하고 변경 요청을 통해 수정할 예정"
                     rows={2}
+                    maxLength={ASSUMPTION_MAX + 10}
+                    className={assumptionTooLong ? 'border-red-400 bg-red-50' : ''}
                   />
-                  <p className="text-xs text-slate-400">나중에 &quot;대표가 답을 안 줘서 임의로 했다&quot;는 상황을 방지하기 위해 사전에 기본 가정을 명시해두세요</p>
+                  {assumptionTooLong && (
+                    <p className="text-xs text-red-500">{ASSUMPTION_MAX}자 이내로 줄여주세요</p>
+                  )}
+                  {!assumptionTooLong && (
+                    <p className="text-xs text-slate-400">나중에 &quot;대표가 답을 안 줘서 임의로 했다&quot;는 상황을 방지하기 위해 사전에 기본 가정을 명시해두세요</p>
+                  )}
                 </div>
               </div>
             )}
@@ -251,9 +336,21 @@ export default function QuestionsForm({ projectId, accessLinkId, features, exist
               </div>
             )}
 
-            <Button type="submit" disabled={isSubmitting} className="w-full gap-2 bg-blue-600 hover:bg-blue-500">
+            <Button
+              type="submit"
+              disabled={isSubmitting || !isFormValid}
+              className={`w-full gap-2 ${
+                isFormValid
+                  ? 'bg-blue-600 hover:bg-blue-500'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              }`}
+            >
               <Send className="w-4 h-4" />
-              {isSubmitting ? '등록 중...' : '협의 요청 등록'}
+              {isSubmitting ? '등록 중...' :
+               !questionTouched && !form.question ? '협의 요청 등록' :
+               questionLen < QUESTION_MIN ? `내용을 ${QUESTION_MIN}자 이상 입력해주세요` :
+               questionTooLong ? `${QUESTION_MAX}자 이내로 줄여주세요` :
+               '협의 요청 등록'}
             </Button>
           </form>
         </CardContent>

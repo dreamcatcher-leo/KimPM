@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import {
   Send, Plus, Paperclip, ChevronDown, ChevronUp,
-  CheckCircle2, Clock, AlertTriangle
+  CheckCircle2, Clock, AlertTriangle, PartyPopper
 } from 'lucide-react'
 import type { Feature } from '@/types'
 
@@ -60,6 +60,8 @@ interface ReportFormProps {
 export default function ReportForm({ projectId, accessLinkId, reportDate, features, token, existingReport }: ReportFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submittedSummary, setSubmittedSummary] = useState('')
 
   // ── 필수 필드 ──
   const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>(
@@ -158,16 +160,46 @@ export default function ReportForm({ projectId, accessLinkId, reportDate, featur
         })
       }
 
+      setSubmittedSummary(summary)
+      setSubmitted(true)
       toast.success('보고가 제출되었습니다! 수고하셨습니다 😊')
-      // 하드 네비게이션으로 홈 이동 (Server Component 완전 재로드)
+      // 2.5초 후 홈으로 이동
       setTimeout(() => {
         window.location.href = `/vendor/${token}`
-      }, 800)
+      }, 2500)
     } catch (err) {
       toast.error('제출 실패: ' + (err instanceof Error ? err.message : '오류'))
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // ── 제출 완료 축하 카드 ────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <div className="max-w-2xl">
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <PartyPopper className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-green-800 mb-2">오늘 보고 완료! 🎉</h2>
+          <p className="text-sm text-green-700 mb-4">
+            수고하셨습니다. 오늘 작업 내용이 대표에게 전달됩니다.
+          </p>
+          {submittedSummary && (
+            <div className="bg-white border border-green-200 rounded-xl px-4 py-3 mb-5 text-left">
+              <p className="text-xs font-semibold text-slate-500 mb-1">제출된 요약</p>
+              <p className="text-sm text-slate-800">{submittedSummary}</p>
+            </div>
+          )}
+          <p className="text-xs text-green-600">
+            잠시 후 홈으로 이동합니다...
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
