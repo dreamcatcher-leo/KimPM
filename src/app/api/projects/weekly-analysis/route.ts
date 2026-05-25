@@ -37,30 +37,40 @@ export async function POST(request: NextRequest) {
     const weekEnd = sunday.toISOString().split('T')[0]
     const today = now.toISOString().split('T')[0]
 
-    // 병렬로 데이터 조회
-    const [
-      { data: features },
-      { data: weeklyPlan },
-      { data: reports },
-      { data: evidenceItems },
-      { data: questions },
-      { data: changeRequests },
-      { data: risks },
-      { data: decisions },
-    ] = await Promise.all([
+    // 병렬로 데이터 조회 (각 쿼리 에러가 전체를 깨지 않도록 개별 처리)
+    const results = await Promise.allSettled([
       supabase.from('features').select('id, order_key, name, status, priority_group').eq('project_id', projectId).order('order_key'),
       supabase.from('weekly_plans').select('*').eq('project_id', projectId).order('week_start', { ascending: false }).limit(1),
       supabase.from('reports').select('*').eq('project_id', projectId).gte('report_date', weekStart).lte('report_date', weekEnd).order('report_date', { ascending: false }),
       supabase.from('evidence_items').select('*').eq('project_id', projectId).gte('created_at', monday.toISOString()).lte('created_at', sunday.toISOString() + 'T23:59:59Z'),
       supabase.from('questions').select('*').eq('project_id', projectId).eq('is_resolved', false).limit(5),
-      supabase.from('change_requests').select('*').eq('project_id', projectId).in('status', ['pending', 'reviewing']).limit(5),
+      // 'reviewing'은 DB enum에 없음 → 'pending' 만 조회
+      supabase.from('change_requests').select('*').eq('project_id', projectId).eq('status', 'pending').limit(5),
       supabase.from('risks').select('*').eq('project_id', projectId).eq('is_resolved', false).limit(5),
       supabase.from('decisions').select('*').eq('project_id', projectId).eq('status', 'pending').limit(5),
     ])
 
-    const currentPlan = weeklyPlan?.[0]
-    const planContent = currentPlan?.final_plan || currentPlan?.vendor_modified || currentPlan?.ai_draft
-    const weeklyGoals = planContent?.goals || []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getResult = (r: PromiseSettledResult<any>) =>
+      r.status === 'fulfilled' ? (r.value?.data ?? null) : null
+
+    const features       = getResult(results[0]) as { status: string; priority_group: string }[] | null
+    const weeklyPlan     = getResult(results[1]) as { final_plan?: { goals?: unknown[] }; vendor_modified?: { goals?: unknown[] }; ai_draft?: { goals?: unknown[] } }[] | null
+    const reports        = getResult(results[2]) as { report_date: string; summary: string; blocker?: string }[] | null
+    const evidenceItems  = getResult(results[3]) as { evidence_type?: string; title?: string }[] | null
+    const questions      = getResult(results[4])
+    const changeRequests = getResult(results[5])
+    const risks          = getResult(results[6])
+    const decisions      = getResult(results[7])
+
+    // 쿼리 실패 로그
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') console.error(`Weekly analysis query[${i}] failed:`, r.reason)
+    })
+
+    const currentPlan = weeklyPlan?.[0] ?? null
+    const planContent = currentPlan?.final_plan || currentPlan?.vendor_modified || currentPlan?.ai_draft || null
+    const weeklyGoals: unknown[] = (planContent as { goals?: unknown[] } | null)?.goals || []
 
     // 실행도 기본 계산
     const workingDaysElapsed = Math.max(0, Math.min(5, Math.floor((now.getTime() - monday.getTime()) / (1000 * 60 * 60 * 24)) + 1))
@@ -104,7 +114,7 @@ ${reports?.slice(0, 3).map(r => `- ${r.report_date}: ${r.summary} | blocker: ${r
 
 [증빙 자료]
 - 이번 주 증빙 수: ${evidenceCount}건
-${evidenceItems?.slice(0, 3).map((e: { evidence_type?: string; title?: string }) => `- [${e.evidence_type}] ${e.title}`).join('\n') || '(증빙 없음)'}
+${(evidenceItems || []).slice(0, 3).map((e) => `- [${e.evidence_type}] ${e.title}`).join('\n') || '(증빙 없음)'}
 
 [블로커 요인]
 - 미해결 질문: ${questions?.length || 0}건
