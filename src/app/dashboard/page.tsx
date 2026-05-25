@@ -434,18 +434,67 @@ export default async function DashboardPage() {
 
           {/* Projects Grid */}
           {projectStats.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-blue-400" />
+            <div className="py-8">
+              {/* 환영 배너 */}
+              <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-8 text-white text-center mb-6 shadow-lg">
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">
+                  {profile?.full_name ? `${profile.full_name}님, 환영합니다!` : '안녕하세요, 대표님!'}
+                </h3>
+                <p className="text-blue-200 text-sm mb-6 leading-relaxed">
+                  김PM은 외주 개발 과정에서 대표님이 놓칠 수 있는 리스크를 AI로 관리해드립니다.<br />
+                  첫 프로젝트를 만들고 외주 관리를 시작해보세요.
+                </p>
+                <Link href="/projects/new">
+                  <Button className="bg-white text-blue-700 hover:bg-blue-50 gap-2 font-semibold px-6 py-2.5">
+                    <Plus className="w-4 h-4" />
+                    첫 프로젝트 만들기
+                  </Button>
+                </Link>
               </div>
-              <h3 className="text-lg font-semibold text-slate-700 mb-2">프로젝트가 없습니다</h3>
-              <p className="text-slate-500 text-sm mb-6">첫 외주 개발 프로젝트를 생성해보세요</p>
-              <Link href="/projects/new">
-                <Button className="bg-blue-600 hover:bg-blue-500 gap-2">
-                  <Plus className="w-4 h-4" />
-                  프로젝트 생성
-                </Button>
-              </Link>
+
+              {/* 시작 가이드 3단계 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    step: '1',
+                    title: '프로젝트 생성',
+                    desc: '외주사 정보, 계약 기간, 요구사항을 입력하면 AI가 기능 목록과 우선순위를 자동 분석합니다.',
+                    icon: '📋',
+                    color: 'bg-blue-50 border-blue-200',
+                    stepColor: 'bg-blue-600',
+                  },
+                  {
+                    step: '2',
+                    title: '외주사 링크 발급',
+                    desc: '설정에서 외주사 전용 링크를 발급하면, 외주사가 로그인 없이 일일 보고를 제출할 수 있습니다.',
+                    icon: '🔗',
+                    color: 'bg-green-50 border-green-200',
+                    stepColor: 'bg-green-600',
+                  },
+                  {
+                    step: '3',
+                    title: 'AI 자동 분석',
+                    desc: '외주사 보고가 쌓이면 AI가 리스크, 일정 지연 신호, Must-Check 항목을 자동으로 알려드립니다.',
+                    icon: '🤖',
+                    color: 'bg-purple-50 border-purple-200',
+                    stepColor: 'bg-purple-600',
+                  },
+                ].map((item) => (
+                  <div key={item.step} className={`rounded-xl border p-5 ${item.color}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-7 h-7 rounded-full ${item.stepColor} text-white text-xs font-bold flex items-center justify-center`}>
+                        {item.step}
+                      </div>
+                      <span className="text-2xl">{item.icon}</span>
+                      <h4 className="font-semibold text-slate-800 text-sm">{item.title}</h4>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

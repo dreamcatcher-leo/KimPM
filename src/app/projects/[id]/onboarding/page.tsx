@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Zap, FileText, CheckCircle2, ArrowRight, Sparkles, Calendar, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Zap, FileText, CheckCircle2, ArrowRight, Sparkles, Calendar, AlertTriangle, RotateCcw, Plus } from 'lucide-react'
 import Link from 'next/link'
 
 interface Feature {
@@ -284,12 +284,27 @@ export default function OnboardingPage() {
           })}
 
           {features.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500">기능이 없습니다</p>
-              <Link href={`/projects/${projectId}/features/new`}>
-                <Button size="sm" className="mt-3 gap-1 bg-blue-600 hover:bg-blue-500">기능 추가</Button>
-              </Link>
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+              <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-7 h-7 text-blue-400" />
+              </div>
+              <h4 className="font-semibold text-slate-800 mb-1">기능 목록이 비어있습니다</h4>
+              <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+                프로젝트 생성 시 AI 분석을 건너뛰셨나요?<br />
+                기능을 직접 추가하거나, 설정에서 요구사항을 다시 입력해 AI 분석을 받을 수 있습니다.
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Link href={`/projects/${projectId}/features/new`}>
+                  <Button size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-500">
+                    <Plus className="w-3.5 h-3.5" /> 기능 직접 추가
+                  </Button>
+                </Link>
+                <Link href={`/projects/${projectId}/dashboard`}>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    대시보드로 이동
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
         </div>

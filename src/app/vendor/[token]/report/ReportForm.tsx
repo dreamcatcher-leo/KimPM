@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,30 +36,49 @@ const EVIDENCE_TYPES = [
   { value: '협업_증빙', label: '협업 증빙', placeholder: '질문 내용, blocker 설명 등' },
 ]
 
+interface ExistingReport {
+  id: string
+  summary?: string | null
+  work_types?: string[] | null
+  related_feature_ids?: string[] | null
+  blocker?: string | null
+  tomorrow_plan?: string | null
+  needs_founder_check?: boolean
+  files_modified?: string | null
+  conclusion?: string | null
+}
+
 interface ReportFormProps {
   projectId: string
   accessLinkId: string
   reportDate: string
   features: Feature[]
   token: string
+  existingReport?: ExistingReport | null
 }
 
-export default function ReportForm({ projectId, accessLinkId, reportDate, features, token }: ReportFormProps) {
+export default function ReportForm({ projectId, accessLinkId, reportDate, features, token, existingReport }: ReportFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // ── 필수 필드 ──
-  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([])
-  const [summary, setSummary] = useState('')
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>(
+    existingReport?.work_types || []
+  )
+  const [summary, setSummary] = useState(existingReport?.summary || '')
 
   // ── 선택 필드 (접기) ──
-  const [showOptional, setShowOptional] = useState(false)
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
-  const [blocker, setBlocker] = useState('')
-  const [tomorrowPlan, setTomorrowPlan] = useState('')
-  const [needsFounderCheck, setNeedsFounderCheck] = useState(false)
-  const [filesModified, setFilesModified] = useState('')
-  const [conclusion, setConclusion] = useState('')
+  const [showOptional, setShowOptional] = useState(
+    !!(existingReport?.blocker || existingReport?.tomorrow_plan || existingReport?.files_modified || existingReport?.conclusion)
+  )
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
+    existingReport?.related_feature_ids || []
+  )
+  const [blocker, setBlocker] = useState(existingReport?.blocker || '')
+  const [tomorrowPlan, setTomorrowPlan] = useState(existingReport?.tomorrow_plan || '')
+  const [needsFounderCheck, setNeedsFounderCheck] = useState(existingReport?.needs_founder_check || false)
+  const [filesModified, setFilesModified] = useState(existingReport?.files_modified || '')
+  const [conclusion, setConclusion] = useState(existingReport?.conclusion || '')
   const [privateNote, setPrivateNote] = useState('')
 
   // ── 증빙 (별도 접기) ──

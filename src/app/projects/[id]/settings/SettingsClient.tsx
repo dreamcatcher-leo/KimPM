@@ -213,7 +213,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
       </Card>
 
       {/* Discord 설정 */}
-      <Card className="border border-gray-200">
+      <Card id="discord" className="border border-gray-200">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-gray-500" />
