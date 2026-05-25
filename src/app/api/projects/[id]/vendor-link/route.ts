@@ -38,14 +38,18 @@ export async function POST(
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('access_links insert error:', JSON.stringify(error))
+      return NextResponse.json({ error: `DB 오류: ${error.message || error.code || JSON.stringify(error)}` }, { status: 500 })
+    }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const url = `${appUrl}/vendor/${token}`
 
     return NextResponse.json({ link, url })
   } catch (error) {
-    console.error('Error creating vendor link:', error)
-    return NextResponse.json({ error: 'Failed to create vendor link' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : JSON.stringify(error)
+    console.error('Error creating vendor link:', msg)
+    return NextResponse.json({ error: `링크 생성 실패: ${msg}` }, { status: 500 })
   }
 }

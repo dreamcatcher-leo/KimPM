@@ -31,7 +31,9 @@ export default function VendorLinkCard({ projectId, vendorLink, vendorAccessUrl 
       setCurrentUrl(data.url)
       toast.success('외주사 링크가 생성되었습니다')
     } catch (err) {
-      toast.error('링크 생성 실패')
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`링크 생성 실패: ${msg}`)
+      console.error('[VendorLinkCard] 링크 생성 오류:', msg)
     } finally {
       setIsGenerating(false)
     }

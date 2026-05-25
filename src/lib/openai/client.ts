@@ -27,7 +27,7 @@ export async function generateSpec(feature: Feature, projectGoal: string): Promi
 - 기대 효과: ${feature.expected_effect || '없음'}
 
 아래 형식으로 정확히 작성해주세요. 각 섹션은 명확하고 실행 가능한 수준으로 작성해주세요.
-비포펫은 강아지 도그워킹 매칭 플랫폼입니다.
+※ 프로젝트 목표와 기능명을 기준으로 작성하고, 다른 프로젝트 사례를 섞지 마세요.
 
 ---
 ## 기능명
@@ -70,7 +70,7 @@ export async function generateSpec(feature: Feature, projectGoal: string): Promi
 [이 기능이 완료되었다고 판단하는 기준 (Given-When-Then 또는 체크리스트 형식)]
 
 ## QA 체크리스트
-[카테고리별 QA 항목들: 보호자 관점 / 도그워커 관점 / 어드민 관점 / 예외 케이스 / 알림 / 데이터 / 권한 / 회귀 확인]
+[카테고리별 QA 항목들: 사용자 관점 / 관리자 관점 / 예외 케이스 / 알림 / 데이터 / 권한 / 회귀 확인]
 
 ## 외주사 예상 질문
 [외주 개발사가 개발 중 물어볼 법한 질문들]
