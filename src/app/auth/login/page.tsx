@@ -127,32 +127,32 @@ function LoginForm() {
               <div className="space-y-2 text-xs">
                 <button
                   type="button"
-                  onClick={() => { setEmail('leo@beforpet.com'); setPassword('founder1234!') }}
+                  onClick={() => { setEmail('founder-test@kimpm.dev'); setPassword('test1234!') }}
                   className="w-full bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-left hover:bg-blue-500/20 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-blue-400 font-semibold flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
-                        대표 / 관리자
+                        대표 / 관리자 (테스트)
                       </div>
-                      <div className="text-slate-500 mt-0.5">leo@beforpet.com</div>
+                      <div className="text-slate-500 mt-0.5">founder-test@kimpm.dev</div>
                     </div>
                     <span className="text-slate-600 text-xs group-hover:text-blue-400 transition-colors">클릭하여 입력 →</span>
                   </div>
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setEmail('vendor@beforpet.com'); setPassword('vendor1234!') }}
+                  onClick={() => { setEmail('vendor-test@kimpm.dev'); setPassword('test1234!') }}
                   className="w-full bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 text-left hover:bg-purple-500/20 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-purple-400 font-semibold flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
-                        외주사
+                        외주사 (테스트)
                       </div>
-                      <div className="text-slate-500 mt-0.5">vendor@beforpet.com</div>
+                      <div className="text-slate-500 mt-0.5">vendor-test@kimpm.dev</div>
                     </div>
                     <span className="text-slate-600 text-xs group-hover:text-purple-400 transition-colors">클릭하여 입력 →</span>
                   </div>

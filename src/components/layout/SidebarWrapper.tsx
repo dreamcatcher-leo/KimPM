@@ -43,8 +43,6 @@ export default function SidebarWrapper({
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      {/* 데스크톱에서 사이드바 너비 확보 */}
-      <div className="hidden lg:block w-64 flex-shrink-0" />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar
           profile={profile}
