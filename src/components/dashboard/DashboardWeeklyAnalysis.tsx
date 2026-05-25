@@ -83,8 +83,8 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}))
         if (res.status === 401) {
-          // 세션 만료 → 페이지 새로고침하면 미들웨어가 로그인 페이지로 안내
-          setError('세션이 만료되었습니다. 페이지를 새로고침해 주세요.')
+          // 세션 만료 → 로그인 페이지로 리디렉션
+          window.location.href = '/auth/login?redirectTo=' + encodeURIComponent(window.location.pathname)
           return
         }
         throw new Error(errBody?.detail || errBody?.error || `서버 오류 (${res.status})`)
@@ -174,18 +174,7 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
           {error && (
             <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
               <span className="text-sm text-red-600">{error}</span>
-              {error.includes('세션') ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                  className="text-red-600 h-7 whitespace-nowrap"
-                >
-                  새로고침
-                </Button>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={() => fetchAnalysis(true)} className="text-red-600 h-7">재시도</Button>
-              )}
+              <Button variant="ghost" size="sm" onClick={() => fetchAnalysis(true)} className="text-red-600 h-7">재시도</Button>
             </div>
           )}
 

@@ -19,7 +19,7 @@ export default function GenerateBriefButton({ projectId, hasBrief = false }: Gen
       const res = await fetch('/api/projects/brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: projectId }),
+        body: JSON.stringify({ projectId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '브리프 생성 실패')
