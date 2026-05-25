@@ -67,6 +67,8 @@ export interface AccessLink {
   last_used_at: string | null
   expires_at: string | null
   created_at: string
+  vendor_user_id?: string | null
+  onboarding_completed?: boolean
 }
 
 export interface Feature {

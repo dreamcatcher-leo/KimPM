@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import type { Project, AccessLink } from '@/types'
 
@@ -68,7 +69,22 @@ export default async function VendorLayout({
     )
   }
 
+  // 온보딩 완료 여부 체크 → 미완료 시 onboarding 페이지로 redirect
+  // (단, 현재 경로가 /onboarding인 경우에는 redirect하지 않음)
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || ''
+  const isOnboardingPage = pathname.includes('/onboarding')
+
+  if (!link.onboarding_completed && !isOnboardingPage) {
+    redirect(`/vendor/${token}/onboarding`)
+  }
+
   const project = link.projects
+
+  // 온보딩 페이지는 독립 레이아웃 (nav 없음)
+  if (isOnboardingPage) {
+    return <>{children}</>
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
