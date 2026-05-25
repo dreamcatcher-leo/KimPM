@@ -134,7 +134,10 @@ export default function ReportForm({ projectId, accessLinkId, reportDate, featur
       }
 
       toast.success('보고가 제출되었습니다! 수고하셨습니다 😊')
-      router.push(`/vendor/${token}`)
+      // 하드 네비게이션으로 홈 이동 (Server Component 완전 재로드)
+      setTimeout(() => {
+        window.location.href = `/vendor/${token}`
+      }, 800)
     } catch (err) {
       toast.error('제출 실패: ' + (err instanceof Error ? err.message : '오류'))
     } finally {

@@ -96,9 +96,13 @@ export default async function VendorHomePage({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-green-800 mb-1">오늘 보고 완료</p>
-                <p className="text-sm text-green-700 leading-relaxed break-words whitespace-pre-wrap line-clamp-4">
-                  {todayReport.summary}
-                </p>
+                {todayReport.summary && todayReport.summary.trim().length > 1 ? (
+                  <p className="text-sm text-green-700 leading-relaxed break-words whitespace-pre-wrap line-clamp-4">
+                    {todayReport.summary}
+                  </p>
+                ) : (
+                  <p className="text-sm text-green-500 italic">보고가 제출되었습니다.</p>
+                )}
                 <Link href="report" className="inline-block mt-2">
                   <span className="text-xs text-green-600 hover:text-green-800 underline underline-offset-2">보고 내용 수정하기 →</span>
                 </Link>
@@ -172,7 +176,7 @@ export default async function VendorHomePage({
                   )}
                 </div>
                 <p className="text-sm text-slate-700 leading-relaxed break-words line-clamp-3 pl-5">
-                  {r.summary}
+                  {r.summary && r.summary.trim().length > 1 ? r.summary : '—'}
                 </p>
               </div>
             ))}

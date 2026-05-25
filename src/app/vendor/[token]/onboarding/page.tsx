@@ -54,7 +54,7 @@ export default function VendorOnboardingPage() {
             setStep('form')
             return
           }
-          router.push(`/vendor/${token}/report`)
+          router.push(`/vendor/${token}`)
           return
         }
         setError(data.error || '오류가 발생했습니다')
@@ -74,9 +74,9 @@ export default function VendorOnboardingPage() {
 
       setStep('done')
 
-      // 3초 후 보고 페이지로 이동
+      // 2.5초 후 홈으로 이동
       setTimeout(() => {
-        router.push(`/vendor/${token}/report`)
+        router.push(`/vendor/${token}`)
       }, 2500)
 
     } catch (e) {
