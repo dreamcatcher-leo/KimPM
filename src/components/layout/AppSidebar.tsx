@@ -152,8 +152,9 @@ export default function AppSidebar({
 
       {/* ── 사이드바 본체 ── */}
       <aside
-        className="w-64 bg-slate-900 min-h-screen flex flex-col border-r border-slate-800 fixed top-0 left-0 z-40 h-full transition-transform duration-300 ease-in-out lg:relative"
+        className="w-64 bg-slate-900 min-h-screen flex flex-col border-r border-slate-800 top-0 left-0 z-40 h-full transition-transform duration-300 ease-in-out"
         style={{
+          position: isDesktop ? 'relative' : 'fixed',
           transform: isDesktop ? 'translateX(0)' : isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
