@@ -26,9 +26,10 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // API 라우트는 통과
+  // API 라우트는 세션 갱신 쿠키를 적용한 뒤 통과
+  // (세션 갱신 없이 return하면 만료된 토큰으로 API 라우트에서 user=null이 됨)
   if (pathname.startsWith('/api/')) {
-    return supabaseResponse
+    return supabaseResponse  // supabaseResponse에는 갱신된 쿠키가 이미 set됨
   }
 
   // Static assets 통과

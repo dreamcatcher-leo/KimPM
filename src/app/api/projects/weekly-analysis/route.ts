@@ -9,8 +9,9 @@ const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) console.error('Weekly analysis auth error:', authError.message)
+    if (!user) return NextResponse.json({ error: 'Unauthorized', reason: 'session_expired' }, { status: 401 })
 
     const { projectId } = await request.json()
     if (!projectId) return NextResponse.json({ error: 'projectId required' }, { status: 400 })
@@ -171,7 +172,8 @@ ${evidenceItems?.slice(0, 3).map((e: { evidence_type?: string; title?: string })
 
   } catch (error) {
     console.error('Weekly analysis error:', error)
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: 'Analysis failed', detail: msg }, { status: 500 })
   }
 }
 
