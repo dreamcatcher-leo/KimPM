@@ -9,21 +9,48 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { seed_data, ai_features, start_mode, ai_analysis, ...projectData } = body
+    const {
+      seed_data, ai_features, start_mode, ai_analysis,
+      // discord 2채널 필드 — DB 컬럼 존재 여부에 따라 별도 처리
+      discord_webhook_daily,
+      discord_webhook_mustcheck,
+      // 구 단일 웹훅 (하위 호환)
+      discord_webhook_url,
+      ...coreProjectData
+    } = body
 
     const admin = createAdminClient()
 
+    // ── 1단계: 핵심 프로젝트 데이터로 먼저 INSERT ──
     const { data: project, error } = await admin
       .from('projects')
       .insert({
-        ...projectData,
+        ...coreProjectData,
+        discord_webhook_url: discord_webhook_url || null,
         founder_id: user.id,
-        contract_amount: projectData.contract_amount ? parseInt(projectData.contract_amount) : null,
+        contract_amount: coreProjectData.contract_amount ? parseInt(coreProjectData.contract_amount) : null,
       })
       .select()
       .single()
 
     if (error) throw error
+
+    // ── 2단계: discord_webhook_daily / mustcheck 컬럼 UPDATE (컬럼 없으면 무시) ──
+    if (project && (discord_webhook_daily || discord_webhook_mustcheck)) {
+      try {
+        await admin
+          .from('projects')
+          .update({
+            ...(discord_webhook_daily ? { discord_webhook_daily } : {}),
+            ...(discord_webhook_mustcheck ? { discord_webhook_mustcheck } : {}),
+          })
+          .eq('id', project.id)
+      } catch {
+        // discord_webhook_daily/mustcheck 컬럼이 아직 DB에 없으면 무시
+        // → settings 페이지에서 나중에 저장 가능
+        console.warn('[projects/POST] discord webhook 컬럼 미존재 — 컬럼 추가 마이그레이션 필요')
+      }
+    }
 
     // AI 분석 기능 목록 저장
     if (ai_features && Array.isArray(ai_features) && ai_features.length > 0 && project) {
@@ -41,8 +68,8 @@ export async function POST(request: NextRequest) {
       await admin.from('features').insert(featuresWithProject)
     }
 
-    // seed_data 옵션은 더 이상 사용하지 않음 (비포펫 고정 데이터 제거)
-    void seed_data
+    // seed_data, start_mode, ai_analysis는 더 이상 서버 처리 불필요
+    void seed_data; void start_mode; void ai_analysis
 
     return NextResponse.json({ project })
   } catch (error) {
