@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * PATCH /api/projects/[id]
- * 프로젝트 설정 업데이트 — discord_webhook_daily/mustcheck 컬럼 포함
- * 컬럼 미존재 시 fallback 처리 (PGRST204 방어)
+ * 프로젝트 설정 업데이트
+ * - 1단계: 확실히 존재하는 핵심 컬럼만 업데이트
+ * - 2단계: discord 신규 컬럼 (daily/mustcheck) — 실패해도 warn만
+ * - 3단계: deprecated discord 컬럼 (risk/decision) — 실패해도 warn만
  */
 export async function PATCH(
   request: NextRequest,
@@ -20,17 +22,23 @@ export async function PATCH(
     }
 
     const body = await request.json()
-
-    // discord_webhook_daily / mustcheck 분리
-    const {
-      discord_webhook_daily,
-      discord_webhook_mustcheck,
-      ...coreData
-    } = body
-
     const admin = createAdminClient()
 
-    // 1단계: 핵심 데이터 업데이트 (항상 안전한 컬럼만)
+    // ── 확실히 존재하는 핵심 컬럼만 추출 ──────────────────────────────────
+    const SAFE_COLUMNS = [
+      'name', 'description', 'goal',
+      'contract_start', 'contract_end', 'contract_amount',
+      'discord_webhook_url', 'discord_channel_id',
+      'brief_send_time', 'vendor_report_reminder_time',
+      'status',
+    ] as const
+
+    const coreData: Record<string, unknown> = {}
+    for (const col of SAFE_COLUMNS) {
+      if (col in body) coreData[col] = body[col]
+    }
+
+    // ── 1단계: 핵심 컬럼 업데이트 ─────────────────────────────────────────
     const { data: project, error: coreError } = await admin
       .from('projects')
       .update(coreData)
@@ -40,38 +48,41 @@ export async function PATCH(
       .single()
 
     if (coreError) {
-      console.error('[PATCH /api/projects/[id]] core update error:', coreError)
+      console.error('[PATCH projects] core update error:', coreError)
       return NextResponse.json({ error: coreError.message }, { status: 500 })
     }
 
-    // 2단계: discord 채널 컬럼 업데이트 (컬럼 없으면 warn만)
-    if (discord_webhook_daily !== undefined || discord_webhook_mustcheck !== undefined) {
+    // ── 2단계: discord 신규 컬럼 (migration 002 필요) ─────────────────────
+    const discordNew: Record<string, unknown> = {}
+    if ('discord_webhook_daily' in body) discordNew.discord_webhook_daily = body.discord_webhook_daily ?? null
+    if ('discord_webhook_mustcheck' in body) discordNew.discord_webhook_mustcheck = body.discord_webhook_mustcheck ?? null
+
+    if (Object.keys(discordNew).length > 0) {
       try {
-        const discordPayload: Record<string, string | null> = {}
-        if (discord_webhook_daily !== undefined) {
-          discordPayload.discord_webhook_daily = discord_webhook_daily || null
-        }
-        if (discord_webhook_mustcheck !== undefined) {
-          discordPayload.discord_webhook_mustcheck = discord_webhook_mustcheck || null
-        }
+        const { error } = await admin.from('projects').update(discordNew).eq('id', id)
+        if (error) console.warn('[PATCH projects] discord 신규 컬럼 업데이트 실패 (migration 002 미실행 가능):', error.message)
+      } catch (e) {
+        console.warn('[PATCH projects] discord 신규 컬럼 예외:', e)
+      }
+    }
 
-        const { error: discordError } = await admin
-          .from('projects')
-          .update(discordPayload)
-          .eq('id', id)
+    // ── 3단계: deprecated discord 컬럼 (risk/decision) ────────────────────
+    const discordDeprecated: Record<string, unknown> = {}
+    if ('discord_webhook_risk' in body) discordDeprecated.discord_webhook_risk = body.discord_webhook_risk ?? null
+    if ('discord_webhook_decision' in body) discordDeprecated.discord_webhook_decision = body.discord_webhook_decision ?? null
 
-        if (discordError) {
-          // PGRST204 = 컬럼 없음 → warn 후 계속
-          console.warn('[PATCH /api/projects/[id]] discord webhook 컬럼 업데이트 실패 (컬럼 미존재 가능):', discordError.message)
-        }
-      } catch (discordErr) {
-        console.warn('[PATCH /api/projects/[id]] discord webhook 2단계 예외:', discordErr)
+    if (Object.keys(discordDeprecated).length > 0) {
+      try {
+        const { error } = await admin.from('projects').update(discordDeprecated).eq('id', id)
+        if (error) console.warn('[PATCH projects] discord deprecated 컬럼 업데이트 실패:', error.message)
+      } catch (e) {
+        console.warn('[PATCH projects] discord deprecated 컬럼 예외:', e)
       }
     }
 
     return NextResponse.json({ project })
   } catch (error) {
-    console.error('[PATCH /api/projects/[id]] 예외:', error)
+    console.error('[PATCH projects] 예외:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

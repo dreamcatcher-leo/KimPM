@@ -142,10 +142,16 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
   const sendDiscordTest = async () => {
     setSendingTest(true)
     try {
+      // URL을 직접 전달 — DB 컬럼 미존재(migration 미실행) 상태에서도 동작
       const res = await fetch('/api/discord/send-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: project.id, type: 'all' }),
+        body: JSON.stringify({
+          projectId: project.id,
+          type: 'all',
+          dailyUrl: settings.discord_webhook_daily || settings.discord_webhook_url || null,
+          mustcheckUrl: settings.discord_webhook_mustcheck || settings.discord_webhook_url || null,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {

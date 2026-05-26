@@ -11,7 +11,13 @@ import {
 /**
  * POST /api/discord/send-test
  * 더미데이터로 Discord 웹훅 실제 발송 테스트
- * body: { projectId: string, type: 'founder_brief'|'question'|'change_request'|'completion'|'weekly_plan'|'all' }
+ * body: {
+ *   projectId: string,
+ *   type: 'founder_brief'|'question'|'change_request'|'completion'|'weekly_plan'|'all',
+ *   // URL을 직접 넘겨서 DB SELECT 없이 동작 (컬럼 미존재 방어)
+ *   dailyUrl?: string,
+ *   mustcheckUrl?: string,
+ * }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -19,34 +25,67 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { projectId, type = 'all' } = await request.json()
+    const body = await request.json()
+    const { projectId, type = 'all', dailyUrl: clientDailyUrl, mustcheckUrl: clientMustcheckUrl } = body
+
     if (!projectId) return NextResponse.json({ error: 'projectId required' }, { status: 400 })
 
-    const { data: project } = await supabase
+    // 프론트에서 URL을 직접 넘긴 경우 우선 사용 (DB 컬럼 미존재 방어)
+    let dailyUrl: string | null = clientDailyUrl || null
+    let mustcheckUrl: string | null = clientMustcheckUrl || null
+
+    // 프론트에서 URL을 안 넘긴 경우 → DB에서 조회 (안전 컬럼만 SELECT)
+    if (!dailyUrl && !mustcheckUrl) {
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id, name, discord_webhook_url')
+        .eq('id', projectId)
+        .eq('founder_id', user.id)
+        .single()
+
+      if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+      // migration 002 실행 후에는 daily/mustcheck 컬럼도 읽기 시도
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: extProject } = await supabase
+          .from('projects')
+          .select('discord_webhook_daily, discord_webhook_mustcheck')
+          .eq('id', projectId)
+          .single() as { data: { discord_webhook_daily?: string | null; discord_webhook_mustcheck?: string | null } | null }
+
+        if (extProject) {
+          dailyUrl = extProject.discord_webhook_daily || (project as { discord_webhook_url?: string | null }).discord_webhook_url || null
+          mustcheckUrl = extProject.discord_webhook_mustcheck || (project as { discord_webhook_url?: string | null }).discord_webhook_url || null
+        }
+      } catch {
+        // 컬럼 없으면 fallback
+        dailyUrl = (project as { discord_webhook_url?: string | null }).discord_webhook_url || null
+        mustcheckUrl = (project as { discord_webhook_url?: string | null }).discord_webhook_url || null
+      }
+    }
+
+    if (!dailyUrl && !mustcheckUrl) {
+      return NextResponse.json({
+        error: 'Discord 웹훅 URL이 설정되지 않았습니다. 설정 → Discord 알림 설정에서 먼저 웹훅 URL을 입력하고 저장해주세요.',
+      }, { status: 400 })
+    }
+
+    // project name 조회 (projectId만 사용)
+    const { data: projectInfo } = await supabase
       .from('projects')
-      .select('id, name, discord_webhook_daily, discord_webhook_mustcheck, discord_webhook_url')
+      .select('id, name')
       .eq('id', projectId)
       .eq('founder_id', user.id)
       .single()
 
-    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proj = project as any
-    const dailyUrl: string | null = proj.discord_webhook_daily || proj.discord_webhook_url || null
-    const mustcheckUrl: string | null = proj.discord_webhook_mustcheck || proj.discord_webhook_url || null
-
-    if (!dailyUrl && !mustcheckUrl) {
-      return NextResponse.json({
-        error: 'Discord 웹훅 URL이 설정되지 않았습니다. 설정 → Discord 알림 설정에서 먼저 웹훅 URL을 입력해주세요.',
-      }, { status: 400 })
-    }
+    const projectName = projectInfo?.name || '테스트 프로젝트'
 
     const results: { type: string; success: boolean; message: string }[] = []
     const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://kimpm.vercel.app'
     const today = new Date().toISOString().split('T')[0]
 
-    // ── 1. Founder Daily Brief (sendFounderBrief 실제 시그니처: 12 args) ──
+    // ── 1. Founder Daily Brief ──────────────────────────────────────────────
     if (type === 'founder_brief' || type === 'all') {
       if (dailyUrl) {
         try {
@@ -54,15 +93,15 @@ export async function POST(request: NextRequest) {
             dailyUrl,
             projectId,
             'dummy-brief-id',
-            project.name,
+            projectName,
             '이번 주 로그인 API 완료, 결제 연동 진행 중. 증빙 자료 2건 첨부됨.',
             [
               { type: 'positive', title: 'P0 기능 2개 완료', description: '로그인/회원가입 기능이 완료되어 검수 대기 중입니다.' },
               { type: 'warning', title: '증빙 자료 부족', description: '이번 주 PR 링크 첨부가 1건 누락되었습니다.' },
               { type: 'critical', title: '결제 API 키 미수신', description: '카카오페이 API 키를 수신하지 못해 결제 연동이 지연되고 있습니다.' },
             ],
-            3,  // mustCheckCount
-            1,  // decisionCount
+            3,
+            1,
             today,
             [
               { title: '결제 PG 연동 지연', level: '위험' },
