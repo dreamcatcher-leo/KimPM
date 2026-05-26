@@ -133,6 +133,8 @@ export default function NewProjectPage() {
     description: '',
     brief_send_time: '09:00',
     discord_webhook_url: '',
+    discord_webhook_daily: '',
+    discord_webhook_mustcheck: '',
   })
 
   // Step 2: 요구사항
@@ -539,16 +541,67 @@ export default function NewProjectPage() {
                 Discord 알림 연동 (선택 — 나중에 설정 가능)
               </button>
               {showDiscord && (
-                <div className="mt-4 space-y-3">
-                  <div className="space-y-2">
-                    <Label>Webhook URL</Label>
-                    <Input name="discord_webhook_url" value={basicForm.discord_webhook_url} onChange={handleBasicChange}
-                      placeholder="https://discord.com/api/webhooks/..." />
+                <div className="mt-4 space-y-4">
+                  {/* 채널 구조 안내 */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                    <p className="font-semibold mb-1">💡 2개 채널로 분리하는 것을 권장합니다</p>
+                    <p>• <strong>📊 일일보고</strong> — AI 요약이 오전 9시에 자동 전송. 흘려봐도 됩니다.</p>
+                    <p>• <strong>🔴 Must-Check</strong> — 질문·변경요청 등 협의 필요 항목이 즉시 @here 알림.</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Daily Brief 발송 시간</Label>
-                    <Input type="time" name="brief_send_time" value={basicForm.brief_send_time} onChange={handleBasicChange} />
+
+                  {/* 📊 일일보고 채널 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">📊 일일보고 채널 Webhook URL</Label>
+                    <Input
+                      name="discord_webhook_daily"
+                      value={basicForm.discord_webhook_daily}
+                      onChange={handleBasicChange}
+                      placeholder="https://discord.com/api/webhooks/..."
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-xs text-slate-400">Founder Daily Brief + AI 리스크 요약 (오전 9시)</p>
                   </div>
+
+                  {/* 🔴 Must-Check 채널 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">🔴 Must-Check 채널 Webhook URL</Label>
+                    <Input
+                      name="discord_webhook_mustcheck"
+                      value={basicForm.discord_webhook_mustcheck}
+                      onChange={handleBasicChange}
+                      placeholder="https://discord.com/api/webhooks/..."
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-xs text-slate-400">외주사 질문·변경요청·완료신청 즉시 @here 알림</p>
+                  </div>
+
+                  {/* Daily Brief 시간 */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Daily Brief 발송 시간</Label>
+                    <Input
+                      type="time"
+                      name="brief_send_time"
+                      value={basicForm.brief_send_time}
+                      onChange={handleBasicChange}
+                    />
+                  </div>
+
+                  {/* 구버전 단일 웹훅 폴백 */}
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-slate-400 hover:text-slate-500">
+                      단일 채널만 사용 (위 2채널 미설정 시 폴백)
+                    </summary>
+                    <div className="mt-2 space-y-1.5">
+                      <Input
+                        name="discord_webhook_url"
+                        value={basicForm.discord_webhook_url}
+                        onChange={handleBasicChange}
+                        placeholder="https://discord.com/api/webhooks/..."
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-slate-400">위 채널 URL이 비어있을 때만 동작합니다.</p>
+                    </div>
+                  </details>
                 </div>
               )}
             </CardContent>
