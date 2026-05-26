@@ -1,4 +1,22 @@
 // Discord Webhook Integration
+// =====================================================
+// 4채널 분리 구조
+//  - daily    : 일일보고 (notifyDailyReport, notifyVendorReportReminder, sendFounderBrief)
+//  - mustcheck: Must-Check 경보 (notifyMustCheck)
+//  - risk     : 리스크 감지 (notifyRisk)
+//  - decision : 의사결정·완료·주간계획 (notifyCompletion, notifyWeeklyPlan)
+// =====================================================
+
+export interface DiscordWebhooks {
+  /** 일일보고 채널 */
+  daily?: string | null
+  /** Must-Check 경보 채널 */
+  mustcheck?: string | null
+  /** 리스크 감지 채널 */
+  risk?: string | null
+  /** 의사결정 / 완료 알림 채널 */
+  decision?: string | null
+}
 
 interface DiscordEmbed {
   title?: string
@@ -43,7 +61,7 @@ async function sendWebhook(webhookUrl: string, message: DiscordMessage): Promise
 }
 
 // =====================================================
-// 외주사 일일 보고 알림
+// 외주사 일일 보고 알림 → daily 채널
 // =====================================================
 export async function notifyDailyReport(
   webhookUrl: string,
@@ -94,7 +112,7 @@ export async function notifyDailyReport(
 }
 
 // =====================================================
-// Founder Daily Brief 발송
+// Founder Daily Brief 발송 → daily 채널
 // =====================================================
 export async function sendFounderBrief(
   webhookUrl: string,
@@ -151,7 +169,7 @@ export async function sendFounderBrief(
 }
 
 // =====================================================
-// 리스크 알림
+// 리스크 알림 → risk 채널
 // =====================================================
 export async function notifyRisk(
   webhookUrl: string,
@@ -194,7 +212,7 @@ export async function notifyRisk(
 }
 
 // =====================================================
-// 주간 계획 공유
+// 주간 계획 공유 → decision 채널
 // =====================================================
 export async function notifyWeeklyPlan(
   webhookUrl: string,
@@ -231,7 +249,7 @@ export async function notifyWeeklyPlan(
 }
 
 // =====================================================
-// 완료 축하 알림
+// 완료 축하 알림 → decision 채널
 // =====================================================
 export async function notifyCompletion(
   webhookUrl: string,
@@ -256,7 +274,7 @@ export async function notifyCompletion(
 }
 
 // =====================================================
-// Must-Check 알림
+// Must-Check 알림 → mustcheck 채널
 // =====================================================
 export async function notifyMustCheck(
   webhookUrl: string,
@@ -288,7 +306,7 @@ export async function notifyMustCheck(
 }
 
 // =====================================================
-// 외주사에게 보고 독려 (정중한 톤)
+// 외주사에게 보고 독려 → daily 채널 (외주사 포털 웹훅)
 // =====================================================
 export async function notifyVendorReportReminder(
   webhookUrl: string,

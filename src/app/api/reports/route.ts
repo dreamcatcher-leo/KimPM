@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateDailyAssessment } from '@/lib/openai/client'
-import { notifyDailyReport, notifyMustCheck } from '@/lib/discord/webhook'
+import { notifyDailyReport, notifyMustCheck, notifyRisk } from '@/lib/discord/webhook'
 import type { Spec, WeeklyPlan, Report } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         .order('week_start', { ascending: false }).limit(1),
       admin.from('reports').select('blocker').eq('project_id', project_id)
         .not('blocker', 'is', null).order('report_date', { ascending: false }).limit(5),
-      admin.from('projects').select('discord_webhook_url, vendor_name').eq('id', project_id).single(),
+      admin.from('projects').select('discord_webhook_url, discord_webhook_daily, discord_webhook_mustcheck, discord_webhook_risk, discord_webhook_decision, vendor_name').eq('id', project_id).single(),
     ])
 
     // Generate AI assessment
@@ -142,10 +142,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Discord notifications
-    if (project?.discord_webhook_url) {
+    // Discord notifications — 채널별 분리
+    // daily 채널: discord_webhook_daily 우선, 없으면 discord_webhook_url(구버전 호환) 사용
+    const dailyWebhook = project?.discord_webhook_daily || project?.discord_webhook_url
+    const mustcheckWebhook = project?.discord_webhook_mustcheck || project?.discord_webhook_url
+    const riskWebhook = project?.discord_webhook_risk || project?.discord_webhook_url
+
+    if (dailyWebhook) {
       await notifyDailyReport(
-        project.discord_webhook_url,
+        dailyWebhook,
         project_id,
         report.id,
         project.vendor_name,
@@ -154,17 +159,31 @@ export async function POST(request: NextRequest) {
         blocker,
         report_date
       )
+    }
 
-      // Notify Must-Check items
+    // Must-Check 알림 → mustcheck 채널
+    if (mustcheckWebhook && mustCheckTriggers.length > 0) {
       for (const trigger of mustCheckTriggers) {
         await notifyMustCheck(
-          project.discord_webhook_url,
+          mustcheckWebhook,
           project_id,
           trigger.title,
           trigger.trigger_type,
           trigger.description
         )
       }
+    }
+
+    // 리스크 알림 → risk 채널 (점검_권장 신호 발생 시)
+    if (riskWebhook && savedAssessment?.alignment_signal === '점검_권장') {
+      await notifyRisk(
+        riskWebhook,
+        project_id,
+        `${report_date}: 주간 계획 정합성 낮음`,
+        '주의',
+        'Weekly_Plan_미정합',
+        savedAssessment.ai_comment || '보고 내용과 주간 계획의 정합성이 낮습니다.'
+      )
     }
 
     return NextResponse.json({

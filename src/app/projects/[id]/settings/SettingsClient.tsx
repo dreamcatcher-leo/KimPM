@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Save, Bell, Link2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
+import { Save, Bell, Link2, Copy, RefreshCw, Settings, CheckCircle2, XCircle } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface AccessLink {
@@ -27,6 +27,12 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ project, accessLinks }: SettingsClientProps) {
   const [saving, setSaving] = useState(false)
+  // 채널별 테스트 상태: null=미시도, true=성공, false=실패
+  const [testStatus, setTestStatus] = useState<Record<string, boolean | null>>({
+    daily: null, mustcheck: null, risk: null, decision: null,
+  })
+  const [testingChannel, setTestingChannel] = useState<string | null>(null)
+
   const [settings, setSettings] = useState({
     name: project.name,
     description: project.description || '',
@@ -36,6 +42,10 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
     contract_amount: project.contract_amount || '',
     discord_webhook_url: project.discord_webhook_url || '',
     discord_channel_id: project.discord_channel_id || '',
+    discord_webhook_daily: project.discord_webhook_daily || '',
+    discord_webhook_mustcheck: project.discord_webhook_mustcheck || '',
+    discord_webhook_risk: project.discord_webhook_risk || '',
+    discord_webhook_decision: project.discord_webhook_decision || '',
     brief_send_time: project.brief_send_time || '09:00',
     vendor_report_reminder_time: project.vendor_report_reminder_time || '17:00',
     status: project.status,
@@ -58,6 +68,10 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
           contract_amount: settings.contract_amount ? Number(settings.contract_amount) : null,
           discord_webhook_url: settings.discord_webhook_url || null,
           discord_channel_id: settings.discord_channel_id || null,
+          discord_webhook_daily: settings.discord_webhook_daily || null,
+          discord_webhook_mustcheck: settings.discord_webhook_mustcheck || null,
+          discord_webhook_risk: settings.discord_webhook_risk || null,
+          discord_webhook_decision: settings.discord_webhook_decision || null,
           brief_send_time: settings.brief_send_time,
           vendor_report_reminder_time: settings.vendor_report_reminder_time,
           status: settings.status,
@@ -73,31 +87,51 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
     }
   }
 
-  const testDiscordWebhook = async () => {
-    if (!settings.discord_webhook_url) {
-      toast.error('Discord Webhook URL을 먼저 입력해주세요.')
+  // 채널별 테스트 — 서버 API 경유로 CORS 문제 없음
+  const testChannelWebhook = async (channelKey: 'daily' | 'mustcheck' | 'risk' | 'decision') => {
+    const urlMap = {
+      daily: settings.discord_webhook_daily,
+      mustcheck: settings.discord_webhook_mustcheck,
+      risk: settings.discord_webhook_risk,
+      decision: settings.discord_webhook_decision,
+    }
+    const labelMap = {
+      daily: '📋 일일보고',
+      mustcheck: '🟣 Must-Check',
+      risk: '🔴 리스크',
+      decision: '⚖️ 의사결정',
+    }
+    const url = urlMap[channelKey]
+    if (!url) {
+      toast.error('Webhook URL을 먼저 입력해주세요.')
       return
     }
+
+    setTestingChannel(channelKey)
+    setTestStatus(prev => ({ ...prev, [channelKey]: null }))
     try {
-      const res = await fetch(settings.discord_webhook_url, {
+      const res = await fetch('/api/discord/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          embeds: [{
-            title: '✅ 김PM 연결 테스트',
-            description: `**${project.name}** 프로젝트와 Discord가 성공적으로 연결되었습니다.`,
-            color: 0x22c55e,
-            timestamp: new Date().toISOString(),
-          }],
+          webhookUrl: url,
+          channelLabel: labelMap[channelKey],
+          projectName: project.name,
         }),
       })
+      const data = await res.json()
       if (res.ok) {
-        toast.success('Discord 연결 테스트 성공! 채널을 확인해주세요.')
+        setTestStatus(prev => ({ ...prev, [channelKey]: true }))
+        toast.success(`${labelMap[channelKey]} 채널 연결 성공! Discord를 확인해주세요.`)
       } else {
-        toast.error('Discord 전송에 실패했습니다. URL을 확인해주세요.')
+        setTestStatus(prev => ({ ...prev, [channelKey]: false }))
+        toast.error(data.error || '전송 실패')
       }
     } catch {
-      toast.error('Discord 연결 테스트 실패')
+      setTestStatus(prev => ({ ...prev, [channelKey]: false }))
+      toast.error('연결 테스트 중 오류가 발생했습니다.')
+    } finally {
+      setTestingChannel(null)
     }
   }
 
@@ -219,40 +253,105 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
             <Bell className="w-4 h-4 text-gray-500" />
             <CardTitle className="text-base">Discord 알림 설정</CardTitle>
           </div>
-          <CardDescription className="text-xs">일일 보고, 리스크, 완료 알림을 Discord로 받습니다.</CardDescription>
+          <CardDescription className="text-xs">
+            알림 종류마다 별도 채널로 분리해서 받을 수 있습니다. 각 채널에서 웹훅 URL을 발급 후 입력하세요.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="webhook" className="text-sm">Webhook URL</Label>
-            <div className="flex gap-2 mt-1">
+        <CardContent className="space-y-5">
+
+          {/* 채널 설정 안내 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 leading-relaxed">
+            <p className="font-semibold mb-1">💡 Discord 채널 웹훅 발급 방법</p>
+            <p>채널 설정 → 연동 → 웹훅 → 새 웹훅 → URL 복사</p>
+          </div>
+
+          {/* 4개 채널 분리 입력 */}
+          {(
+            [
+              {
+                key: 'daily' as const,
+                label: '📋 일일보고 채널',
+                desc: '외주사가 보고를 제출할 때마다 이 채널로 알림이 옵니다.',
+                field: 'discord_webhook_daily' as const,
+                badge: 'bg-blue-100 text-blue-700',
+              },
+              {
+                key: 'mustcheck' as const,
+                label: '🟣 Must-Check 채널',
+                desc: 'AI가 긴급 확인이 필요하다고 판단했을 때 이 채널로 경보가 옵니다.',
+                field: 'discord_webhook_mustcheck' as const,
+                badge: 'bg-purple-100 text-purple-700',
+              },
+              {
+                key: 'risk' as const,
+                label: '🔴 리스크 채널',
+                desc: '보고 패턴 이상, 일정 지연 등 위험 신호가 감지되면 이 채널로 알림이 옵니다.',
+                field: 'discord_webhook_risk' as const,
+                badge: 'bg-red-100 text-red-700',
+              },
+              {
+                key: 'decision' as const,
+                label: '⚖️ 의사결정 채널',
+                desc: '기능 완료 신청, 범위 변경 요청, 주간 계획 공유 알림이 이 채널로 옵니다.',
+                field: 'discord_webhook_decision' as const,
+                badge: 'bg-yellow-100 text-yellow-700',
+              },
+            ] as const
+          ).map(ch => (
+            <div key={ch.key} className="border border-gray-100 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ch.badge}`}>
+                    {ch.label}
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">{ch.desc}</p>
+                </div>
+                {testStatus[ch.key] === true && (
+                  <span className="flex items-center gap-1 text-xs text-green-600 font-medium flex-shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> 연결됨
+                  </span>
+                )}
+                {testStatus[ch.key] === false && (
+                  <span className="flex items-center gap-1 text-xs text-red-500 font-medium flex-shrink-0">
+                    <XCircle className="w-3.5 h-3.5" /> 실패
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={settings[ch.field]}
+                  onChange={e => setSettings(s => ({ ...s, [ch.field]: e.target.value }))}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  className="flex-1 font-mono text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => testChannelWebhook(ch.key)}
+                  disabled={testingChannel === ch.key || !settings[ch.field]}
+                  className="flex-shrink-0 text-xs"
+                >
+                  {testingChannel === ch.key ? '전송 중...' : '테스트'}
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          {/* 구버전 호환 — 단일 웹훅 (숨겨진 폴백) */}
+          <details className="text-xs">
+            <summary className="cursor-pointer text-gray-400 hover:text-gray-600">
+              이전 설정 (단일 채널 — 채널 미분리 시 폴백으로 사용됨)
+            </summary>
+            <div className="mt-2">
               <Input
-                id="webhook"
                 value={settings.discord_webhook_url}
                 onChange={e => setSettings(s => ({ ...s, discord_webhook_url: e.target.value }))}
                 placeholder="https://discord.com/api/webhooks/..."
-                className="flex-1 font-mono text-xs"
+                className="font-mono text-xs"
               />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={testDiscordWebhook}
-                className="flex-shrink-0"
-              >
-                <Bell className="w-3.5 h-3.5 mr-1" />
-                테스트
-              </Button>
+              <p className="text-gray-400 mt-1">위 4개 채널 중 URL이 비어있는 채널의 폴백으로 동작합니다.</p>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="channel" className="text-sm">채널 ID (선택)</Label>
-            <Input
-              id="channel"
-              value={settings.discord_channel_id}
-              onChange={e => setSettings(s => ({ ...s, discord_channel_id: e.target.value }))}
-              placeholder="Discord 채널 ID"
-              className="mt-1 font-mono text-xs"
-            />
-          </div>
+          </details>
 
           <div className="border-t border-gray-100 pt-4">
             <h4 className="text-sm font-medium text-gray-700 mb-3">알림 시간 설정</h4>
@@ -266,7 +365,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
                   onChange={e => setSettings(s => ({ ...s, brief_send_time: e.target.value }))}
                   className="mt-1"
                 />
-                <p className="text-xs text-gray-400 mt-1">매일 대표님께 브리프 전송</p>
+                <p className="text-xs text-gray-400 mt-1">매일 대표님께 브리프 전송 (일일보고 채널)</p>
               </div>
               <div>
                 <Label htmlFor="reminder_time" className="text-sm">외주사 보고 리마인더</Label>
