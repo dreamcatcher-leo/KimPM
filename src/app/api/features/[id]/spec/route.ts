@@ -160,9 +160,32 @@ export async function PUT(
 
     if (!latestSpec) return NextResponse.json({ error: '수정할 초안 정의서가 없습니다' }, { status: 404 })
 
+    // raw_content가 포함된 경우 → 구조화 필드 재파싱해서 함께 업데이트
+    let updatePayload = { ...body }
+    if (body.raw_content) {
+      const parsed = parseSpecContent(body.raw_content)
+      // qa_checklist_raw는 jsonb 컬럼으로 별도 변환
+      const qaRawText = parsed.qa_checklist_raw as string | undefined
+      delete parsed.qa_checklist_raw
+      let qaChecklist: { id: string; item: string; checked: boolean }[] | null = null
+      if (qaRawText) {
+        const lines = qaRawText.split('\n').filter(l => l.trim().startsWith('- ['))
+        qaChecklist = lines.map((line, idx) => ({
+          id: `qa${idx + 1}`,
+          item: line.replace(/^- \[[ x]\] /, '').trim(),
+          checked: false,
+        }))
+      }
+      updatePayload = {
+        ...body,
+        ...parsed,
+        ...(qaChecklist && qaChecklist.length > 0 ? { qa_checklist: qaChecklist } : {}),
+      }
+    }
+
     const { data: spec, error } = await admin
       .from('specs')
-      .update(body)
+      .update(updatePayload)
       .eq('id', latestSpec.id)
       .select()
       .single()

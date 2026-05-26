@@ -29,6 +29,8 @@ interface Project {
   name: string
   vendor_name: string
   goal: string
+  contract_start: string | null
+  contract_end: string | null
 }
 
 type GenerationStatus = 'idle' | 'generating' | 'done' | 'error'
@@ -249,6 +251,17 @@ export default function OnboardingPage() {
     return acc
   }, {} as Record<string, Feature[]>)
 
+  // 개발 기간 주 수 계산
+  const totalWeeks = (() => {
+    if (!project?.contract_start || !project?.contract_end) return null
+    const start = new Date(project.contract_start)
+    const end = new Date(project.contract_end)
+    const diffMs = end.getTime() - start.getTime()
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+    const weeks = Math.ceil(diffDays / 7)
+    return weeks > 0 ? weeks : null
+  })()
+
   const planningCount = features.filter(f => f.status === 'planning').length
   const specCount = features.filter(f => f.status !== 'planning').length
   const filledCount = Object.values(webhooks).filter(v => v.trim()).length
@@ -343,9 +356,14 @@ export default function OnboardingPage() {
                     : `전체 정의서 일괄 생성\n(${planningCount}개)`}
                 </span>
               </button>
-              <Link href={`/projects/${projectId}/weekly-plan`} className="flex flex-col items-center gap-2 p-4 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-all text-center">
+              <Link
+                href={`/projects/${projectId}/weekly-plan`}
+                className="flex flex-col items-center gap-2 p-4 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-all text-center"
+              >
                 <Calendar className="w-6 h-6" />
-                <span className="text-xs font-semibold">첫 주간 계획<br />생성하기</span>
+                <span className="text-xs font-semibold">
+                  {totalWeeks ? `${totalWeeks}주 전체 계획` : '전체 계획'}<br />생성하기
+                </span>
               </Link>
               <Link href={`/projects/${projectId}/features`} className="flex flex-col items-center gap-2 p-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all text-center">
                 <FileText className="w-6 h-6" />

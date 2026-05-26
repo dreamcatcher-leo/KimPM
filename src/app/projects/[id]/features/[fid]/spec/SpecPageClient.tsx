@@ -80,6 +80,7 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
   const [editContent, setEditContent] = useState(spec?.raw_content || '')
   const [currentSpec, setCurrentSpec] = useState(spec)
   const [genError, setGenError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('structured')
 
   const collabStatus = getSpecCollabStatus(currentSpec, feature.status)
   const statusInfo = COLLAB_STATUS_LABELS[collabStatus]
@@ -163,12 +164,18 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ raw_content: editContent }),
       })
-      if (!res.ok) throw new Error()
-      toast.success('저장되었습니다')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '저장 실패')
+      // ✅ 서버에서 재파싱한 최신 spec으로 로컬 상태 즉시 갱신
+      // → 탭 전환 시 이전 데이터 노출 버그 방지
+      setCurrentSpec(data.spec)
+      setEditContent(data.spec.raw_content || '')
       setIsEditing(false)
+      setActiveTab('structured') // 저장 후 구조화 보기 탭으로 자동 이동
+      toast.success('저장되었습니다')
       router.refresh()
-    } catch {
-      toast.error('저장 실패')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '저장 실패')
     }
   }
 
@@ -228,7 +235,7 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
               </Button>
 
               {!isFinalApproved && (
-                <Button onClick={() => setIsEditing(!isEditing)} variant="outline" size="sm" className="gap-1.5">
+                <Button onClick={() => { setIsEditing(true); setActiveTab('edit') }} variant="outline" size="sm" className="gap-1.5">
                   <Edit className="w-3.5 h-3.5" />
                   수정
                 </Button>
@@ -343,7 +350,7 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
 
       {/* Spec Content */}
       {currentSpec && (
-        <Tabs defaultValue="structured">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="structured">구조화 보기</TabsTrigger>
             <TabsTrigger value="raw">전문 보기</TabsTrigger>
@@ -422,7 +429,7 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
                   </div>
                   <div className="flex gap-2 mt-3">
                     <Button
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => { setIsEditing(true); setActiveTab('edit') }}
                       variant="outline"
                       size="sm"
                       className="gap-1.5 border-orange-300 text-orange-700"
@@ -460,7 +467,7 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
                       <Save className="w-3.5 h-3.5" />
                       저장
                     </Button>
-                    <Button onClick={() => setIsEditing(false)} variant="outline" size="sm">
+                    <Button onClick={() => { setIsEditing(false); setActiveTab('structured') }} variant="outline" size="sm">
                       취소
                     </Button>
                   </div>

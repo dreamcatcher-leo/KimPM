@@ -63,10 +63,9 @@ export default async function WeeklyPlanPage({
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900">주간 계획</h2>
         <p className="text-sm text-slate-500 mt-0.5">
-          이번 주({start} ~ {end}) 작업 계획을 관리합니다
-          {totalWeeks && (
-            <span className="ml-2 text-slate-400">· 전체 {totalWeeks}주</span>
-          )}
+          {totalWeeks
+            ? `전체 ${totalWeeks}주 계획을 관리합니다 · 이번 주 (${start} ~ ${end})`
+            : `이번 주(${start} ~ ${end}) 작업 계획을 관리합니다`}
         </p>
       </div>
       <WeeklyPlanClient

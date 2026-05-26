@@ -387,16 +387,36 @@ export default function WeeklyPlanClient({
     <div className="space-y-6">
       {/* ── 상단 컨트롤 바 ─────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        {/* 좌측: 이번 주 생성 버튼 */}
+        {/* 좌측: 계획 생성 버튼 — 전체 N주 우선, 이번 주는 보조 */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* 전체 기간 일괄 생성 — 메인 버튼 */}
+          {contractStart && contractEnd && (
+            <Button
+              onClick={() => bulkGenerate(false)}
+              disabled={isGenerating || isBulkGenerating}
+              className="gap-2 bg-green-600 hover:bg-green-500"
+            >
+              <Layers className={`w-4 h-4 ${isBulkGenerating ? 'animate-pulse' : ''}`} />
+              {isBulkGenerating
+                ? bulkProgress
+                  ? `생성 중 ${bulkProgress.done}/${bulkProgress.total}주...`
+                  : '준비 중...'
+                : `전체 ${totalWeeks || '?'}주 계획 생성`
+              }
+            </Button>
+          )}
+
+          {/* 이번 주 단독 생성 — 보조 버튼 */}
           {!thisWeekPlan ? (
             <Button
               onClick={() => generatePlan(false)}
               disabled={isGenerating || isBulkGenerating}
-              className="gap-2 bg-blue-600 hover:bg-blue-500"
+              variant="outline"
+              size="sm"
+              className="gap-2"
             >
               <Zap className="w-4 h-4" />
-              {isGenerating ? 'AI 생성 중...' : '이번 주 계획 AI 생성'}
+              {isGenerating ? 'AI 생성 중...' : '이번 주만 생성'}
             </Button>
           ) : (
             <Button
@@ -408,25 +428,6 @@ export default function WeeklyPlanClient({
             >
               <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
               {isGenerating ? '재생성 중...' : '이번 주 재생성'}
-            </Button>
-          )}
-
-          {/* 전체 기간 일괄 생성 */}
-          {contractStart && contractEnd && (
-            <Button
-              onClick={() => bulkGenerate(false)}
-              disabled={isGenerating || isBulkGenerating}
-              variant="outline"
-              size="sm"
-              className="gap-2 border-purple-200 text-purple-700 hover:bg-purple-50"
-            >
-              <Layers className={`w-4 h-4 ${isBulkGenerating ? 'animate-pulse' : ''}`} />
-              {isBulkGenerating
-                ? bulkProgress
-                  ? `생성 중 ${bulkProgress.done}/${bulkProgress.total}주...`
-                  : '준비 중...'
-                : `전체 ${totalWeeks || '?'}주 일괄 생성`
-              }
             </Button>
           )}
         </div>
