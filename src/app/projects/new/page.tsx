@@ -13,8 +13,8 @@ import Link from 'next/link'
 import {
   ArrowLeft, ArrowRight, Zap, Sparkles, CheckCircle2,
   AlertTriangle, ChevronDown, ChevronUp, Package, Plus,
-  LayoutTemplate, FileText, Users, Search, Building2, Info,
-  GripVertical, BarChart3, Lightbulb
+  FileText, Users, Search, Building2, Info,
+  GripVertical, BarChart3
 } from 'lucide-react'
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
@@ -81,28 +81,7 @@ function PriorityBadge({ group }: { group: string }) {
   )
 }
 
-// ─── 배달앱 예시 ──────────────────────────────────────────────────────────────
-const DELIVERY_APP_EXAMPLE = {
-  one_line: '음식 배달 앱 — 주문부터 배달 추적까지 원스톱으로',
-  must_have: `회원가입 / 소셜 로그인 (카카오, 네이버)
-주소 설정 (현재 위치 / 검색)
-음식점 목록 & 필터 (카테고리, 거리, 별점)
-메뉴 상세 및 장바구니
-주문 및 결제 (카드, 카카오페이, 토스)
-주문 상태 실시간 추적
-리뷰 & 평점 등록
-사장님 관리 페이지 (메뉴/영업시간 관리)
-배달 상태 알림 (푸시)`,
-  core_problem: '지금은 전화 주문과 직접 배달로 운영 중. 주문 처리/배달 관리 자동화로 하루 운영 시간을 3시간 단축하고 싶음.',
-  nice_to_have: `쿠폰 & 포인트 시스템
-단골 가게 찜하기
-재주문 빠른 주문
-사장님 정산 리포트
-배달 기사 앱 (별도)`,
-  priority_basis: '결제 & 주문 흐름이 먼저, 리뷰/쿠폰은 론칭 후 추가',
-  references: '배달의민족 초기 버전 수준, 쿠팡이츠 UI 참고',
-  constraints: 'React Native (iOS/Android 동시), 3개월 내 MVP 배포 목표',
-}
+
 
 // ─── 메인 컴포넌트 ──────────────────────────────────────────────────────────────
 export default function NewProjectPage() {
@@ -112,9 +91,8 @@ export default function NewProjectPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
-  const [startMode, setStartMode] = useState<'ai' | 'template' | 'empty' | null>(null)
+  const [startMode, setStartMode] = useState<'ai' | 'empty' | null>(null)
   const [showDiscord, setShowDiscord] = useState(false)
-  const [showExample, setShowExample] = useState(false)
 
   // DnD 우선순위 조정 (step 3)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
@@ -153,13 +131,6 @@ export default function NewProjectPage() {
 
   const handleReqChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setReqForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-
-  // 예시 불러오기
-  const loadExample = () => {
-    setReqForm(prev => ({ ...prev, ...DELIVERY_APP_EXAMPLE }))
-    setShowExample(false)
-    toast.success('배달앱 예시를 불러왔습니다. 내용을 수정해서 사용하세요.')
-  }
 
   // ─── AI 분석 실행 ─────────────────────────────────────────────────────────────
   const runAnalysis = async () => {
@@ -229,7 +200,7 @@ export default function NewProjectPage() {
   // ─── 프로젝트 생성 ────────────────────────────────────────────────────────────
   const createProject = async () => {
     if (!startMode) {
-      toast.error('시작 방식을 선택해주세요', { description: '위에서 AI 제안 / 템플릿 / 빈 프로젝트 중 하나를 선택해주세요' })
+      toast.error('시작 방식을 선택해주세요', { description: '위에서 AI 제안 기능으로 시작 또는 빈 프로젝트 중 하나를 선택해주세요' })
       return
     }
     setIsCreating(true)
@@ -241,7 +212,7 @@ export default function NewProjectPage() {
         body: JSON.stringify({
           ...basicForm,
           contract_amount: basicForm.contract_amount || null,
-          seed_data: startMode === 'template',
+          seed_data: false,
           ai_features: startMode === 'ai' ? selectedFeatures : [],
           start_mode: startMode,
           ai_analysis: analysisResult ? {
@@ -630,38 +601,12 @@ export default function NewProjectPage() {
           <button onClick={() => setStep(1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm mb-4">
             <ArrowLeft className="w-4 h-4" /> 이전
           </button>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">요구사항 입력</h1>
-              <p className="text-slate-500 text-sm mt-1">AI가 기능 목록과 P0/P1/P2 우선순위를 자동으로 제안합니다</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setShowExample(true)} className="gap-1.5 text-xs">
-              <Lightbulb className="w-3.5 h-3.5" />
-              배달앱 예시 보기
-            </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">요구사항 입력</h1>
+            <p className="text-slate-500 text-sm mt-1">AI가 기능 목록과 P0/P1/P2 우선순위를 자동으로 제안합니다</p>
           </div>
         </div>
         <StepIndicator step={2} vendorDecided={vendorDecided} />
-
-        {/* 예시 모달 */}
-        {showExample && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-              <h3 className="font-bold text-slate-900 mb-1">배달앱 MVP 예시</h3>
-              <p className="text-xs text-slate-500 mb-4">아래 예시를 불러와서 수정해서 사용하세요</p>
-              <div className="bg-slate-50 rounded-xl p-3 mb-4 text-xs text-slate-700 space-y-2 max-h-64 overflow-y-auto">
-                <p><strong>서비스:</strong> {DELIVERY_APP_EXAMPLE.one_line}</p>
-                <p><strong>핵심 기능:</strong></p>
-                <pre className="whitespace-pre-wrap text-xs">{DELIVERY_APP_EXAMPLE.must_have}</pre>
-                <p><strong>해결 문제:</strong> {DELIVERY_APP_EXAMPLE.core_problem}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={loadExample} className="flex-1 bg-blue-600 hover:bg-blue-500 text-sm">예시 불러오기</Button>
-                <Button variant="outline" onClick={() => setShowExample(false)} className="flex-1 text-sm">취소</Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 안내 배너 */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
@@ -1099,20 +1044,6 @@ export default function NewProjectPage() {
                 </div>
               </div>
             )}
-
-            <div onClick={() => setStartMode('template')}
-              className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${startMode === 'template' ? 'border-purple-600 bg-purple-50' : 'border-slate-200 bg-white hover:border-purple-300'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${startMode === 'template' ? 'bg-purple-600' : 'bg-purple-100'}`}>
-                  <LayoutTemplate className={`w-4 h-4 ${startMode === 'template' ? 'text-white' : 'text-purple-600'}`} />
-                </div>
-                <div className="flex-1">
-                  <span className="font-semibold text-slate-900 text-sm">배달앱 예시 템플릿으로 시작</span>
-                  <p className="text-xs text-slate-500">배달앱 기능 14개(P0 7개, P1 7개)를 참고용으로 불러옵니다</p>
-                </div>
-                {startMode === 'template' && <CheckCircle2 className="w-5 h-5 text-purple-600 flex-shrink-0" />}
-              </div>
-            </div>
 
             <div onClick={() => setStartMode('empty')}
               className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${startMode === 'empty' ? 'border-slate-600 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-400'}`}>
