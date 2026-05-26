@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Save, Bell, Link2, Copy, RefreshCw, Settings, CheckCircle2, XCircle } from 'lucide-react'
+import { Save, Bell, Link2, Copy, RefreshCw, Settings, CheckCircle2, XCircle, Send } from 'lucide-react'
 import type { Project } from '@/types'
 
 interface AccessLink {
@@ -27,6 +27,7 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ project, accessLinks }: SettingsClientProps) {
   const [saving, setSaving] = useState(false)
+  const [sendingTest, setSendingTest] = useState(false)
   // 채널별 테스트 상태: null=미시도, true=성공, false=실패
   const [testStatus, setTestStatus] = useState<Record<string, boolean | null>>({
     daily: null, mustcheck: null,
@@ -56,10 +57,11 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
   const saveSettings = async () => {
     setSaving(true)
     try {
-      const supabase = (await import('@/lib/supabase/client')).createClient()
-      const { error } = await supabase
-        .from('projects')
-        .update({
+      // API route를 통해 저장 — discord_webhook_daily/mustcheck 컬럼 분리 처리
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: settings.name,
           description: settings.description || null,
           goal: settings.goal || null,
@@ -75,12 +77,17 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
           brief_send_time: settings.brief_send_time,
           vendor_report_reminder_time: settings.vendor_report_reminder_time,
           status: settings.status,
-        })
-        .eq('id', project.id)
+        }),
+      })
 
-      if (error) throw error
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
+
       toast.success('설정이 저장되었습니다.')
-    } catch {
+    } catch (err) {
+      console.error('[Settings] 저장 오류:', err)
       toast.error('저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
@@ -128,6 +135,35 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
       toast.error('연결 테스트 중 오류가 발생했습니다.')
     } finally {
       setTestingChannel(null)
+    }
+  }
+
+  // 더미데이터 실제 Discord 발송 테스트
+  const sendDiscordTest = async () => {
+    setSendingTest(true)
+    try {
+      const res = await fetch('/api/discord/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id, type: 'all' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Discord 발송 테스트 실패')
+        return
+      }
+      if (data.success) {
+        toast.success(`✅ ${data.summary} — Discord를 확인해주세요!`)
+      } else if (data.partial) {
+        toast.success(`⚠️ ${data.summary} 일부 발송 성공 — Discord를 확인해주세요`)
+      } else {
+        toast.error(`발송 실패: ${data.results?.map((r: {message: string}) => r.message).join(', ')}`)
+      }
+      console.log('[Discord Test Results]', data.results)
+    } catch {
+      toast.error('발송 테스트 중 오류가 발생했습니다.')
+    } finally {
+      setSendingTest(false)
     }
   }
 
@@ -357,6 +393,28 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
               <p className="text-gray-400 mt-1">위 2개 채널 URL이 비어있을 때 폴백으로 동작합니다.</p>
             </div>
           </details>
+
+          {/* 실제 발송 테스트 */}
+          <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-purple-800 mb-1">더미데이터 실제 발송 테스트</p>
+                <p className="text-xs text-purple-600 leading-relaxed">
+                  📊 Founder Brief + 🔴 질문·변경요청·완료신청·주간계획 알림을 실제 Discord 채널로 발송합니다.<br />
+                  설정된 모든 채널로 테스트 메시지가 전송됩니다.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={sendDiscordTest}
+                disabled={sendingTest || (!settings.discord_webhook_daily && !settings.discord_webhook_mustcheck && !settings.discord_webhook_url)}
+                className="flex-shrink-0 bg-purple-600 hover:bg-purple-500 text-white gap-1.5 text-xs"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {sendingTest ? '발송 중...' : '실제 발송 테스트'}
+              </Button>
+            </div>
+          </div>
 
           <div className="border-t border-gray-100 pt-4">
             <h4 className="text-sm font-medium text-gray-700 mb-3">알림 시간 설정</h4>

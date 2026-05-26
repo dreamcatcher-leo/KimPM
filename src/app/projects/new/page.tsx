@@ -43,7 +43,7 @@ interface AnalysisResult {
 // ─── 스텝 인디케이터 ─────────────────────────────────────────────────────────────
 function StepIndicator({ step, vendorDecided }: { step: number; vendorDecided: boolean | null }) {
   const steps = vendorDecided === false
-    ? ['외주사 선택', '요구사항 입력', 'AI 분석', '외주사 서치']
+    ? ['외주사 선택', '요구사항 입력', 'AI 분석', '프로젝트 생성']
     : ['외주사 선택', '기본 정보', '요구사항 입력', 'AI 분석', '시작 방식']
   return (
     <div className="flex items-center gap-0 mb-8 flex-wrap gap-y-2">
@@ -802,52 +802,15 @@ export default function NewProjectPage() {
           </Card>
         )}
 
-        {/* 외주사 서치 에이전트 CTA */}
-        <div className="bg-gradient-to-br from-purple-900 to-purple-800 rounded-2xl p-6 text-white mb-5">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Search className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-lg mb-1">외주사 서치 AI 에이전트</h3>
-              <p className="text-purple-200 text-sm mb-4">
-                요구사항을 분석해 적합한 외주 개발사를 찾고,<br />
-                콜드메일 초안까지 자동으로 만들어드립니다.
-              </p>
-              <div className="space-y-2 text-sm text-purple-100 mb-5">
-                {[
-                  '요구사항 기반 외주사 후보 검색',
-                  '기술 스택 & 예산 적합도 평가',
-                  '콜드메일 초안 자동 생성',
-                  '대표 승인 후 발송 (자동 대량 발송 없음)',
-                  '응답 업체 관리 & 미팅 조율',
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-purple-300 flex-shrink-0" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-              <Button
-                className="bg-white text-purple-900 hover:bg-purple-50 font-semibold gap-2"
-                onClick={() => {
-                  const summary = analysisResult?.core_value || reqForm.one_line || ''
-                  router.push(`/vendor-search?from=new&summary=${encodeURIComponent(summary)}`)
-                }}
-              >
-                <Sparkles className="w-4 h-4" />
-                외주사 서치 시작하기
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* 분석 결과로 먼저 진행하기 */}
-        <div className="border border-slate-200 rounded-xl p-4 bg-white">
-          <p className="text-sm font-semibold text-slate-700 mb-1">또는, 외주사 없이 먼저 프로젝트 만들기</p>
-          <p className="text-xs text-slate-500 mb-3">AI 분석 결과로 프로젝트를 생성하고, 외주사는 나중에 연결할 수 있습니다.</p>
-          <Button variant="outline" size="sm" onClick={() => { setVendorDecided(null); setStep(4) }} className="gap-2 text-xs">
-            <FileText className="w-3.5 h-3.5" />
+        {/* 프로젝트 생성 */}
+        <div className="border border-slate-200 rounded-xl p-5 bg-white">
+          <p className="text-sm font-semibold text-slate-700 mb-1">AI 분석 결과로 프로젝트 생성하기</p>
+          <p className="text-xs text-slate-500 mb-4">분석된 기능 목록으로 프로젝트를 시작하고, 외주사는 나중에 연결할 수 있습니다.</p>
+          <Button
+            className="gap-2 bg-blue-600 hover:bg-blue-500 text-white"
+            onClick={() => { setVendorDecided(null); setStep(4) }}
+          >
+            <FileText className="w-4 h-4" />
             AI 분석 결과로 프로젝트 생성 →
           </Button>
         </div>

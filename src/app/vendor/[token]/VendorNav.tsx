@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Home, BookOpen, Send, MessageSquare, GitBranch, CheckSquare, FileImage, FileText, Menu, X } from 'lucide-react'
+import { Home, BookOpen, Send, MessageSquare, GitBranch, CheckSquare, FileImage, FileText, Calendar, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 interface VendorNavProps {
@@ -17,6 +17,7 @@ export default function VendorNav({ token, projectName }: VendorNavProps) {
 
   const navItems = [
     { href: `/vendor/${token}`, label: '홈', icon: Home, exact: true },
+    { href: `/vendor/${token}/weekly-plan`, label: '개발 일정', icon: Calendar },
     { href: `/vendor/${token}/specs`, label: '기능 정의서', icon: BookOpen },
     { href: `/vendor/${token}/report`, label: '일일 보고', icon: Send },
     { href: `/vendor/${token}/questions`, label: '질문', icon: MessageSquare },
