@@ -48,9 +48,9 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 // Discord 2채널 설정
 interface DiscordWebhooks {
   discord_webhook_daily: string
-  discord_webhook_decision: string
-  // 구버전 호환 필드 (deprecated)
   discord_webhook_mustcheck: string
+  // 구버전 호환 필드 (deprecated)
+  discord_webhook_decision: string
   discord_webhook_risk: string
 }
 
@@ -61,30 +61,30 @@ const DISCORD_CHANNELS = [
     emoji: '📊',
     colorBadge: 'bg-blue-100 text-blue-700',
     colorBorder: 'border-blue-200',
-    desc: '오전 9시 고정 발송',
+    desc: '오전 9시 고정 — 정보성 (흘려봐도 됨)',
     bullets: [
-      '외주사 일일 보고 수신 알림',
-      'AI 리스크 분석 결과',
-      'Founder Daily Brief (AI 요약)',
+      '외주사 일일 보고 수신 알림 (링크만)',
+      'Founder Daily Brief — AI 요약 + 리스크/Blocker 통합',
     ],
     recommended: true,
     example: '예) #daily-report',
   },
   {
-    key: 'discord_webhook_decision' as keyof DiscordWebhooks,
-    label: '⚖️ 의사결정 채널',
-    emoji: '⚖️',
-    colorBadge: 'bg-orange-100 text-orange-700',
-    colorBorder: 'border-orange-200',
-    desc: '발생 즉시 발송',
+    key: 'discord_webhook_mustcheck' as keyof DiscordWebhooks,
+    label: '🔴 Must-Check 채널',
+    emoji: '🔴',
+    colorBadge: 'bg-red-100 text-red-700',
+    colorBorder: 'border-red-200',
+    desc: '발생 즉시 @here — 협의 필요 항목 전부',
     bullets: [
-      '외주사 변경 요청 (즉시 검토 필요)',
-      '외주사 질문/협의 등록',
-      '기능 완료 신청',
-      'Must-Check 경보',
+      '외주사 질문 (일정영향 무관, 전부)',
+      '외주사 변경 요청',
+      '기능 정의서 수정 제안',
+      '기능 완료 신청 (검수 필요)',
+      '주간 계획 공유 (동의 필요)',
     ],
     recommended: true,
-    example: '예) #decisions',
+    example: '예) #must-check',
   },
 ] as const
 
@@ -106,8 +106,8 @@ export default function OnboardingPage() {
   // Discord 웹훅 상태
   const [webhooks, setWebhooks] = useState<DiscordWebhooks>({
     discord_webhook_daily: '',
-    discord_webhook_decision: '',
     discord_webhook_mustcheck: '',
+    discord_webhook_decision: '',
     discord_webhook_risk: '',
   })
   const [testingChannel, setTestingChannel] = useState<string | null>(null)
@@ -126,8 +126,8 @@ export default function OnboardingPage() {
         // 기존 설정 있으면 채움
         setWebhooks({
           discord_webhook_daily: proj.discord_webhook_daily || '',
-          discord_webhook_decision: proj.discord_webhook_decision || '',
           discord_webhook_mustcheck: proj.discord_webhook_mustcheck || '',
+          discord_webhook_decision: proj.discord_webhook_decision || '',
           discord_webhook_risk: proj.discord_webhook_risk || '',
         })
       }
@@ -224,8 +224,8 @@ export default function OnboardingPage() {
           .from('projects')
           .update({
             discord_webhook_daily: webhooks.discord_webhook_daily || null,
-            discord_webhook_decision: webhooks.discord_webhook_decision || null,
             discord_webhook_mustcheck: webhooks.discord_webhook_mustcheck || null,
+            discord_webhook_decision: webhooks.discord_webhook_decision || null,
             discord_webhook_risk: webhooks.discord_webhook_risk || null,
           })
           .eq('id', projectId)
@@ -506,9 +506,9 @@ export default function OnboardingPage() {
                     📌 2개 채널로 알림을 분리하는 이유
                   </p>
                   <div className="space-y-1.5 text-xs text-blue-800">
-                    <p>• <strong>📊 일일보고 채널</strong> — 오전 9시에 자동 요약이 옵니다. 매일 흘려봐도 됩니다</p>
-                    <p>• <strong>⚖️ 의사결정 채널</strong> — 외주사의 변경요청·질문이 즉시 옵니다. 알림 ON 필수!</p>
-                    <p className="mt-2 text-blue-700">AI 리스크 분석 결과는 일일보고 채널에 포함됩니다.</p>
+                    <p>• <strong>📊 일일보고 채널</strong> — 오전 9시 AI 요약 + 리스크/Blocker. 흘려봐도 됩니다.</p>
+                    <p>• <strong>🔴 Must-Check 채널</strong> — 외주사 질문·변경요청·수정제안·완료신청이 즉시 @here. 알림 ON 필수!</p>
+                    <p className="mt-2 text-blue-700">협의가 필요한 모든 항목은 Must-Check 채널로 집중됩니다.</p>
                   </div>
                 </div>
 

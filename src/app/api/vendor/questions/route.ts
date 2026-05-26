@@ -97,16 +97,32 @@ export async function POST(request: NextRequest) {
       console.warn('must_check insert 건너뜀:', mcErr)
     }
 
-    // ─── Discord 알림 → decision 채널 (실패해도 무시) ────────────────────
+    // ─── Discord 알림 → mustcheck 채널 (실패해도 무시) ──────────────────
     try {
       const { data: proj } = await admin
         .from('projects')
-        .select('discord_webhook_decision, discord_webhook_url')
+        .select('discord_webhook_mustcheck, discord_webhook_url, name')
         .eq('id', body.project_id)
         .single()
-      const webhook = proj?.discord_webhook_decision || proj?.discord_webhook_url
+      const webhook = proj?.discord_webhook_mustcheck || proj?.discord_webhook_url
       if (webhook) {
-        await notifyQuestion(webhook, body.project_id, body.question, body.schedule_impact)
+        // feature_id 있으면 기능명 조회
+        let featureName: string | null = null
+        if (body.feature_id) {
+          const { data: feat } = await admin
+            .from('features')
+            .select('name')
+            .eq('id', body.feature_id)
+            .single()
+          featureName = feat?.name || null
+        }
+        await notifyQuestion(
+          webhook,
+          body.project_id,
+          body.question,
+          body.schedule_impact ?? null,
+          featureName
+        )
       }
     } catch (dErr) {
       console.warn('Discord question 알림 건너뜀:', dErr)

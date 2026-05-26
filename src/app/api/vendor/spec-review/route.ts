@@ -1,7 +1,7 @@
 // 외주사 → 기능 정의서 수정 제안 제출
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
-import { notifyMustCheck } from '@/lib/discord/webhook'
+import { notifySpecReview } from '@/lib/discord/webhook'
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,21 +61,20 @@ export async function POST(request: NextRequest) {
         console.warn('must_check insert 건너뜀:', mcErr)
       }
 
-      // Discord 의사결정 채널 알림
+      // Discord mustcheck 채널 알림
       try {
         const { data: proj } = await admin
           .from('projects')
-          .select('discord_webhook_decision, discord_webhook_url')
+          .select('discord_webhook_mustcheck, discord_webhook_url')
           .eq('id', pid)
           .single()
-        const webhook = proj?.discord_webhook_decision || proj?.discord_webhook_url
+        const webhook = proj?.discord_webhook_mustcheck || proj?.discord_webhook_url
         if (webhook) {
-          await notifyMustCheck(
+          await notifySpecReview(
             webhook,
             pid,
-            `기능 정의서 수정 제안: ${feature_name || '기능'}`,
-            '외주사_확인_요청',
-            `외주사가 기능 정의서에 수정 제안을 제출했습니다.\n${review.trim().slice(0, 100)}...`
+            feature_name || '기능',
+            review.trim()
           )
         }
       } catch (dErr) {

@@ -88,10 +88,37 @@ export async function GET(request: NextRequest) {
         .select()
         .single()
 
-      // Send Discord notification
-      if (project.discord_webhook_url && brief) {
+      // Send Discord notification → daily 채널 (편의시 discord_webhook_daily, 폴백은 discord_webhook_url)
+      const dailyWebhook = project.discord_webhook_daily || project.discord_webhook_url
+      if (dailyWebhook && brief) {
+        // risks[] 및 repeatBlocker 생성
+        const riskItems = (risks || []).map((r: { title: string; level: string }) => ({
+          title: r.title,
+          level: r.level,
+        }))
+
+        // 반복 blocker 감지: 최근 3일 보고에서 동일 blocker 반복 여부 확인
+        const { data: recentReports } = await admin
+          .from('reports')
+          .select('blockers')
+          .eq('project_id', project.id)
+          .not('blockers', 'is', null)
+          .order('report_date', { ascending: false })
+          .limit(3)
+
+        let repeatBlocker: string | null = null
+        if (recentReports && recentReports.length >= 2) {
+          const blockerTexts = recentReports
+            .map((r: { blockers: string | null }) => r.blockers?.trim())
+            .filter(Boolean) as string[]
+          // 첫 번째 blocker가 2개 이상에서 동일하면 반복 blocker로 판단
+          if (blockerTexts.length >= 2 && blockerTexts[0] === blockerTexts[1]) {
+            repeatBlocker = blockerTexts[0]
+          }
+        }
+
         await sendFounderBrief(
-          project.discord_webhook_url,
+          dailyWebhook,
           project.id,
           brief.id,
           project.name,
@@ -99,7 +126,9 @@ export async function GET(request: NextRequest) {
           briefData.key_signals as { type: string; title: string; description: string }[],
           mustCheckItems.length,
           decisionItems.length,
-          today
+          today,
+          riskItems,
+          repeatBlocker
         )
 
         await admin.from('founder_daily_briefs').update({

@@ -68,14 +68,14 @@ export async function POST(request: NextRequest) {
       }).then(({ error }) => { if (error) console.warn('must_check insert 건너뜀:', error.message) }),
     ])
 
-    // ─── Discord 알림 → decision 채널 (실패해도 무시) ────────────────────
+    // ─── Discord 알림 → mustcheck 채널 (실패해도 무시) ──────────────────
     try {
       const { data: proj } = await admin
         .from('projects')
-        .select('discord_webhook_decision, discord_webhook_url')
+        .select('discord_webhook_mustcheck, discord_webhook_url')
         .eq('id', link.project_id)
         .single()
-      const webhook = proj?.discord_webhook_decision || proj?.discord_webhook_url
+      const webhook = proj?.discord_webhook_mustcheck || proj?.discord_webhook_url
       if (webhook) {
         await notifyChangeRequest(
           webhook,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
           crData.title,
           crData.content,
           crData.reason,
-          crData.schedule_impact
+          crData.schedule_impact ?? null
         )
       }
     } catch (dErr) {

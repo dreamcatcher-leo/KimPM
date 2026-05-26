@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     // 토큰 검증
     const { data: link } = await admin
       .from('access_links')
-      .select('*, projects(name, discord_webhook_url)')
+      .select('*, projects(name)')
       .eq('token', token)
       .eq('is_active', true)
       .single()
@@ -97,22 +97,26 @@ export async function POST(request: NextRequest) {
       related_type: 'completion_candidate',
     })
 
-    // Discord 알림
-    const projectName = (link.projects as { name: string; discord_webhook_url: string | null } | null)?.name || '프로젝트'
-    const webhookUrl = (link.projects as { name: string; discord_webhook_url: string | null } | null)?.discord_webhook_url
-
-    if (webhookUrl) {
-      try {
+    // Discord 알림 → mustcheck 채널 (실패해도 무시)
+    try {
+      const { data: proj } = await admin
+        .from('projects')
+        .select('discord_webhook_mustcheck, discord_webhook_url, name')
+        .eq('id', project_id)
+        .single()
+      const projectName = proj?.name || '프로젝트'
+      const webhookUrl = proj?.discord_webhook_mustcheck || proj?.discord_webhook_url
+      if (webhookUrl) {
         await notifyCompletion(
           webhookUrl,
+          project_id,
           feature.name,
           link.vendor_name || projectName,
           `[${feature.order_key}] ${summary}`
         )
-      } catch (discordError) {
-        console.error('Discord notification failed:', discordError)
-        // Discord 알림 실패해도 성공 처리
       }
+    } catch (discordError) {
+      console.warn('Discord completion 알림 건너뜀:', discordError)
     }
 
     return NextResponse.json({ success: true, id: completion.id })

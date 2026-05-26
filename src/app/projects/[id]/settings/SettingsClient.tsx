@@ -29,7 +29,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
   const [saving, setSaving] = useState(false)
   // 채널별 테스트 상태: null=미시도, true=성공, false=실패
   const [testStatus, setTestStatus] = useState<Record<string, boolean | null>>({
-    daily: null, decision: null,
+    daily: null, mustcheck: null,
   })
   const [testingChannel, setTestingChannel] = useState<string | null>(null)
 
@@ -88,14 +88,14 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
   }
 
   // 채널별 테스트 — 서버 API 경유로 CORS 문제 없음
-  const testChannelWebhook = async (channelKey: 'daily' | 'decision') => {
+  const testChannelWebhook = async (channelKey: 'daily' | 'mustcheck') => {
     const urlMap = {
       daily: settings.discord_webhook_daily,
-      decision: settings.discord_webhook_decision,
+      mustcheck: settings.discord_webhook_mustcheck,
     }
     const labelMap = {
       daily: '📊 일일보고',
-      decision: '⚖️ 의사결정',
+      mustcheck: '🔴 Must-Check',
     }
     const url = urlMap[channelKey]
     if (!url) {
@@ -269,24 +269,24 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
                 label: '📊 일일보고 채널',
                 badge: 'bg-blue-100 text-blue-700',
                 field: 'discord_webhook_daily' as const,
-                desc: '오전 9시 고정 발송',
+                desc: '오전 9시 고정 발송 — 정보성 (툵 흐려도 됨)',
                 bullets: [
-                  '외주사 일일 보고 수신 알림',
-                  'AI 리스크 분석 결과 (보고 패턴 이상, 일정 지연 등)',
-                  'Founder Daily Brief (AI 요약)',
+                  '외주사 일일 보고 수신 알림 (링크만)',
+                  'Founder Daily Brief — AI 요약 + 리스크/Blocker 통합',
                 ],
               },
               {
-                key: 'decision' as const,
-                label: '⚖️ 의사결정 채널',
-                badge: 'bg-orange-100 text-orange-700',
-                field: 'discord_webhook_decision' as const,
-                desc: '발생 즉시 발송',
+                key: 'mustcheck' as const,
+                label: '🔴 Must-Check 채널',
+                badge: 'bg-red-100 text-red-700',
+                field: 'discord_webhook_mustcheck' as const,
+                desc: '발생 즉시 @here — 협의 필요 항목 전부',
                 bullets: [
-                  '외주사 변경 요청 (즉시 검토 필요)',
-                  '외주사 질문/협의 등록',
-                  '기능 완료 신청',
-                  'Must-Check 경보',
+                  '외주사 질문 (일정영향 무관, 전부)',
+                  '외주사 변경 요청',
+                  '기능 정의서 수정 제안',
+                  '기능 완료 신청 (검수 필요)',
+                  '주간 계획 공유 (동의 필요)',
                 ],
               },
             ] as const

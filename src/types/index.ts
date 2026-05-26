@@ -54,10 +54,10 @@ export interface Project {
   discord_channel_id: string | null
   /** 📊 일일보고 채널 — 일일보고 + AI 리스크 분석 (오전 9시 고정) */
   discord_webhook_daily: string | null
-  /** ⚖️ 의사결정 채널 — 변경 요청 + 질문 (발생 즉시) */
-  discord_webhook_decision: string | null
-  /** @deprecated 2채널로 통합됨 */
+  /** 🔴 Must-Check 채널 — 외주사 협의 필요 항목 전부 (발생 즉시 @here) */
   discord_webhook_mustcheck: string | null
+  /** @deprecated → discord_webhook_mustcheck로 통합됨. 하위 호환 유지 */
+  discord_webhook_decision: string | null
   /** @deprecated discord_webhook_daily로 통합됨 */
   discord_webhook_risk: string | null
   vendor_report_reminder_time: string | null
