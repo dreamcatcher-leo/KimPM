@@ -39,15 +39,18 @@ interface WeeklyAnalysis {
 interface Props {
   projectId: string
   projectName: string
+  contractStart?: string
 }
 
 // ─── localStorage 캐시 키 헬퍼 ───────────────────────────────────────────────
-function getCacheKey(projectId: string) {
+// contractStart를 포함: 계약기간 바뀌면 이전 캐시 자동 무효화
+function getCacheKey(projectId: string, contractStart?: string) {
   const today = new Date().toISOString().split('T')[0]
-  return `kimpm_weekly_analysis_${projectId}_${today}`
+  const cs = contractStart || 'none'
+  return `kimpm_weekly_analysis_${projectId}_${cs}_${today}`
 }
 
-export default function DashboardWeeklyAnalysis({ projectId, projectName }: Props) {
+export default function DashboardWeeklyAnalysis({ projectId, projectName, contractStart }: Props) {
   const [analysis, setAnalysis] = useState<WeeklyAnalysis | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,16 +58,19 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
   const [isCached, setIsCached] = useState(false)
 
   const fetchAnalysis = useCallback(async (forceRefresh = false) => {
-    // 당일 캐시 확인
+    // 당일 캐시 확인 (contractStart 포함 키 → 계약기간 변경 시 자동 무효화)
     if (!forceRefresh) {
       try {
-        const cached = localStorage.getItem(getCacheKey(projectId))
+        const cached = localStorage.getItem(getCacheKey(projectId, contractStart))
         if (cached) {
           const { data, savedAt } = JSON.parse(cached)
-          setAnalysis(data)
-          setLastUpdated(new Date(savedAt))
-          setIsCached(true)
-          return
+          // contract_not_started 캐시는 무시 (매번 API 재호출)
+          if (!data?.meta?.contract_not_started) {
+            setAnalysis(data)
+            setLastUpdated(new Date(savedAt))
+            setIsCached(true)
+            return
+          }
         }
       } catch {
         // 캐시 파싱 실패 시 무시하고 새로 생성
@@ -93,9 +99,11 @@ export default function DashboardWeeklyAnalysis({ projectId, projectName }: Prop
       setAnalysis(data)
       const now = new Date()
       setLastUpdated(now)
-      // 당일 캐시 저장
+      // 당일 캐시 저장 (contract_not_started는 캐시 안 함 — 항상 즉시 0% 반환)
       try {
-        localStorage.setItem(getCacheKey(projectId), JSON.stringify({ data, savedAt: now.toISOString() }))
+        if (!data?.meta?.contract_not_started) {
+          localStorage.setItem(getCacheKey(projectId, contractStart), JSON.stringify({ data, savedAt: now.toISOString() }))
+        }
       } catch {
         // localStorage 저장 실패 무시
       }

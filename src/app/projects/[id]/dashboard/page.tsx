@@ -130,13 +130,24 @@ export default async function ProjectDashboard({
     'Must_Check_필요': 'bg-purple-100 text-purple-700',
   }
 
-  const daysLeft = Math.ceil(
-    (new Date(project.contract_end).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-  )
-  const totalDays = Math.ceil(
-    (new Date(project.contract_end).getTime() - new Date(project.contract_start).getTime()) / (1000 * 60 * 60 * 24)
-  )
-  const progressPercent = Math.max(0, Math.min(100, ((totalDays - daysLeft) / totalDays) * 100))
+  const now = new Date()
+  const contractStart = project.contract_start ? new Date(project.contract_start) : null
+  const contractEnd = project.contract_end ? new Date(project.contract_end) : null
+
+  const daysLeft = contractEnd
+    ? Math.ceil((contractEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    : 0
+  const totalDays = (contractStart && contractEnd)
+    ? Math.ceil((contractEnd.getTime() - contractStart.getTime()) / (1000 * 60 * 60 * 24))
+    : 0
+
+  // 계약 시작 전이면 0%, 진행 중이면 경과일/전체일, 종료면 100%
+  const elapsedDays = contractStart
+    ? Math.max(0, Math.ceil((now.getTime() - contractStart.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0
+  const progressPercent = totalDays > 0
+    ? Math.max(0, Math.min(100, (elapsedDays / totalDays) * 100))
+    : 0
 
   const urgentCount = (mustCheckItems?.length || 0) + (pendingDecisions?.length || 0) + (openRisks?.filter(r => r.level === '위험' || r.level === 'Must_Check_필요').length || 0)
 
@@ -353,7 +364,7 @@ export default async function ProjectDashboard({
       {/* ══════════════════════════════════════════
           주간 AI 분석
       ══════════════════════════════════════════ */}
-      <DashboardWeeklyAnalysis projectId={id} projectName={project.name} />
+      <DashboardWeeklyAnalysis projectId={id} projectName={project.name} contractStart={project.contract_start} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* ─ 왼쪽 2/3 ─ */}
