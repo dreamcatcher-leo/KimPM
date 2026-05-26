@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * PATCH /api/projects/[id]
  * 프로젝트 설정 업데이트
- * - 1단계: 확실히 존재하는 핵심 컬럼만 업데이트
- * - 2단계: discord 신규 컬럼 (daily/mustcheck) — 실패해도 warn만
- * - 3단계: deprecated discord 컬럼 (risk/decision) — 실패해도 warn만
+ * - admin client 미사용 (service_role key 의존 제거)
+ * - 일반 supabase client + RLS 로 founder_id 검증
+ * - 컬럼을 개별 그룹으로 분리해서 없는 컬럼 때문에 전체 실패 방지
  */
 export async function PATCH(
   request: NextRequest,
@@ -22,67 +21,62 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const admin = createAdminClient()
 
-    // ── 확실히 존재하는 핵심 컬럼만 추출 ──────────────────────────────────
-    const SAFE_COLUMNS = [
-      'name', 'description', 'goal',
-      'contract_start', 'contract_end', 'contract_amount',
-      'discord_webhook_url', 'discord_channel_id',
-      'brief_send_time', 'vendor_report_reminder_time',
-      'status',
-    ] as const
-
-    const coreData: Record<string, unknown> = {}
-    for (const col of SAFE_COLUMNS) {
-      if (col in body) coreData[col] = body[col]
+    // ── 1단계: 초기 스키마에 반드시 존재하는 핵심 컬럼 ─────────────────────
+    const coreFields: Record<string, unknown> = {}
+    const CORE = ['name', 'description', 'goal', 'contract_start', 'contract_end', 'contract_amount', 'status']
+    for (const k of CORE) {
+      if (k in body) coreFields[k] = body[k]
     }
 
-    // ── 1단계: 핵심 컬럼 업데이트 ─────────────────────────────────────────
-    const { data: project, error: coreError } = await admin
+    const { data: project, error: coreError } = await supabase
       .from('projects')
-      .update(coreData)
+      .update(coreFields)
       .eq('id', id)
-      .eq('founder_id', user.id)
+      .eq('founder_id', user.id)   // RLS: 본인 프로젝트만
       .select()
       .single()
 
     if (coreError) {
-      console.error('[PATCH projects] core update error:', coreError)
+      console.error('[PATCH projects] core 실패:', coreError.code, coreError.message)
       return NextResponse.json({ error: coreError.message }, { status: 500 })
     }
 
-    // ── 2단계: discord 신규 컬럼 (migration 002 필요) ─────────────────────
-    const discordNew: Record<string, unknown> = {}
-    if ('discord_webhook_daily' in body) discordNew.discord_webhook_daily = body.discord_webhook_daily ?? null
-    if ('discord_webhook_mustcheck' in body) discordNew.discord_webhook_mustcheck = body.discord_webhook_mustcheck ?? null
+    // ── 2단계: 추가 컬럼들 — 각각 독립 try-catch ────────────────────────────
+    const extraGroups = [
+      // 구 단일 웹훅 컬럼 (초기부터 존재할 가능성 높음)
+      ['discord_webhook_url', 'discord_channel_id'],
+      // 시간 설정 컬럼
+      ['brief_send_time', 'vendor_report_reminder_time'],
+      // discord 신규 컬럼 (migration 002 필요)
+      ['discord_webhook_daily', 'discord_webhook_mustcheck'],
+      // discord deprecated 컬럼
+      ['discord_webhook_risk', 'discord_webhook_decision'],
+    ]
 
-    if (Object.keys(discordNew).length > 0) {
-      try {
-        const { error } = await admin.from('projects').update(discordNew).eq('id', id)
-        if (error) console.warn('[PATCH projects] discord 신규 컬럼 업데이트 실패 (migration 002 미실행 가능):', error.message)
-      } catch (e) {
-        console.warn('[PATCH projects] discord 신규 컬럼 예외:', e)
+    for (const group of extraGroups) {
+      const groupData: Record<string, unknown> = {}
+      for (const k of group) {
+        if (k in body) groupData[k] = body[k] ?? null
       }
-    }
-
-    // ── 3단계: deprecated discord 컬럼 (risk/decision) ────────────────────
-    const discordDeprecated: Record<string, unknown> = {}
-    if ('discord_webhook_risk' in body) discordDeprecated.discord_webhook_risk = body.discord_webhook_risk ?? null
-    if ('discord_webhook_decision' in body) discordDeprecated.discord_webhook_decision = body.discord_webhook_decision ?? null
-
-    if (Object.keys(discordDeprecated).length > 0) {
+      if (Object.keys(groupData).length === 0) continue
       try {
-        const { error } = await admin.from('projects').update(discordDeprecated).eq('id', id)
-        if (error) console.warn('[PATCH projects] discord deprecated 컬럼 업데이트 실패:', error.message)
+        const { error } = await supabase
+          .from('projects')
+          .update(groupData)
+          .eq('id', id)
+          .eq('founder_id', user.id)
+        if (error) {
+          console.warn(`[PATCH projects] 그룹 [${group.join(',')}] 실패 (컬럼 미존재 가능):`, error.message)
+        }
       } catch (e) {
-        console.warn('[PATCH projects] discord deprecated 컬럼 예외:', e)
+        console.warn(`[PATCH projects] 그룹 [${group.join(',')}] 예외:`, e)
       }
     }
 
     return NextResponse.json({ project })
   } catch (error) {
-    console.error('[PATCH projects] 예외:', error)
+    console.error('[PATCH projects] 최상위 예외:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
