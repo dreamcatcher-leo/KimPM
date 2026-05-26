@@ -20,7 +20,7 @@ export default function VendorNav({ token, projectName }: VendorNavProps) {
     { href: `/vendor/${token}/specs`, label: '기능 정의서', icon: BookOpen },
     { href: `/vendor/${token}/report`, label: '일일 보고', icon: Send },
     { href: `/vendor/${token}/questions`, label: '질문', icon: MessageSquare },
-    { href: `/vendor/${token}/change-request`, label: '범위 변경', icon: GitBranch },
+    { href: `/vendor/${token}/change-request`, label: '변경 요청', icon: GitBranch },
     { href: `/vendor/${token}/completion`, label: '완료 신청', icon: CheckSquare },
     { href: `/vendor/${token}/evidence`, label: '증빙자료', icon: FileImage },
     { href: `/vendor/${token}/private-notes`, label: '비공개 메모', icon: FileText },

@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Zap, Save, CheckCircle, Edit, RefreshCw,
-  FileText, Users, Target, Layout, Bell, Shield, Database, AlertCircle
+  FileText, Users, Target, Layout, Bell, Shield, Database, AlertCircle,
+  Send, Eye, MessageSquare, ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { Feature, Spec } from '@/types'
@@ -45,14 +46,43 @@ function SpecSection({ title, icon: Icon, content }: { title: string; icon: Reac
   )
 }
 
+// 기능 정의서 협업 상태 계산
+function getSpecCollabStatus(spec: Spec | null, featureStatus: string) {
+  if (!spec) return 'no_spec'
+  if (featureStatus === 'approved') return 'approved'
+  if (spec.status === 'approved') return 'final_approved'  // 대표 최종 승인
+  const sentAt = (spec as Spec & { sent_at?: string | null }).sent_at
+  const viewedAt = (spec as Spec & { viewed_at?: string | null }).viewed_at
+  // vendor_answer_drafts에 수정 제안이 포함됐는지
+  const hasVendorSuggestion = spec.vendor_answer_drafts?.includes('[외주사 수정 제안')
+  if (hasVendorSuggestion) return 'vendor_reviewed'  // 외주사 수정 제안 있음
+  if (viewedAt) return 'vendor_viewed'               // 외주사가 열람
+  if (sentAt) return 'sent'                          // 외주사에게 전송됨
+  return 'draft'                                     // 초안 (미전송)
+}
+
+const COLLAB_STATUS_LABELS: Record<string, { label: string; color: string; desc: string }> = {
+  no_spec: { label: '정의서 없음', color: 'bg-slate-100 text-slate-500', desc: '' },
+  draft: { label: '초안 작성됨', color: 'bg-yellow-100 text-yellow-700', desc: '외주사에게 아직 전송하지 않았습니다.' },
+  sent: { label: '외주사 전송됨', color: 'bg-blue-100 text-blue-700', desc: '외주사가 아직 열람하지 않았습니다.' },
+  vendor_viewed: { label: '외주사 열람', color: 'bg-purple-100 text-purple-700', desc: '외주사가 정의서를 확인했습니다. 수정 제안을 기다리고 있습니다.' },
+  vendor_reviewed: { label: '수정 제안 도착', color: 'bg-orange-100 text-orange-700', desc: '외주사가 수정 제안을 제출했습니다. 검토 후 최종 승인해주세요.' },
+  final_approved: { label: '최종 승인됨', color: 'bg-green-100 text-green-700', desc: '대표가 최종 승인한 기능 정의서입니다.' },
+  approved: { label: '개발 완료', color: 'bg-green-200 text-green-800', desc: '기능 개발이 완료된 상태입니다.' },
+}
+
 export default function SpecPageClient({ projectId, feature, spec }: SpecPageClientProps) {
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+  const [isSending, setIsSending] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(spec?.raw_content || '')
   const [currentSpec, setCurrentSpec] = useState(spec)
   const [genError, setGenError] = useState<string | null>(null)
+
+  const collabStatus = getSpecCollabStatus(currentSpec, feature.status)
+  const statusInfo = COLLAB_STATUS_LABELS[collabStatus]
 
   const generateSpec = async () => {
     setIsGenerating(true)
@@ -91,13 +121,33 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
     }
   }
 
+  // 외주사에게 전송
+  const sendToVendor = async () => {
+    if (!currentSpec) return
+    setIsSending(true)
+    try {
+      const res = await fetch(`/api/features/${feature.id}/spec/send`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      // sent_at을 로컬 상태에 반영
+      setCurrentSpec(prev => prev ? { ...prev, sent_at: data.sent_at } as typeof prev : null)
+      toast.success('외주사에게 기능 정의서를 전송했습니다. 외주사 포털에서 확인 가능합니다.')
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '전송 실패')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // 최종 승인
   const approveSpec = async () => {
     setIsApproving(true)
     try {
       const res = await fetch(`/api/features/${feature.id}/spec/approve`, { method: 'POST' })
       if (!res.ok) throw new Error('승인 실패')
       setCurrentSpec(prev => prev ? { ...prev, status: 'approved' } : null)
-      toast.success('기능 정의서가 승인되었습니다')
+      toast.success('기능 정의서가 최종 승인되었습니다')
       router.refresh()
     } catch {
       toast.error('승인 실패')
@@ -116,12 +166,17 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
       if (!res.ok) throw new Error()
       toast.success('저장되었습니다')
       setIsEditing(false)
+      router.refresh()
     } catch {
       toast.error('저장 실패')
     }
   }
 
-  const isApproved = currentSpec?.status === 'approved'
+  const isFinalApproved = currentSpec?.status === 'approved'
+  // vendor가 수정 제안 남겼는지
+  const vendorSuggestionText = currentSpec?.vendor_answer_drafts?.includes('[외주사 수정 제안')
+    ? currentSpec.vendor_answer_drafts.split('[외주사 수정 제안').slice(1).map(s => '[외주사 수정 제안' + s).join('\n\n---\n\n')
+    : null
 
   return (
     <div className="p-6 max-w-4xl">
@@ -132,7 +187,7 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
       </Link>
 
       {/* Feature Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500">
@@ -144,14 +199,10 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
             <Badge variant="outline" className="text-xs">
               {feature.priority_group}
             </Badge>
-            {isApproved && (
-              <Badge className="bg-green-100 text-green-700 text-xs gap-1">
-                <CheckCircle className="w-3 h-3" />
-                승인됨
+            {statusInfo && (
+              <Badge className={`text-xs ${statusInfo.color}`}>
+                {statusInfo.label}
               </Badge>
-            )}
-            {currentSpec?.status === 'draft' && (
-              <Badge className="bg-yellow-100 text-yellow-700 text-xs">초안</Badge>
             )}
           </div>
           <h2 className="text-xl font-bold text-slate-900">{feature.name}</h2>
@@ -161,51 +212,103 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 flex-shrink-0 ml-4">
+        <div className="flex gap-2 flex-shrink-0 ml-4 flex-wrap justify-end">
           {!currentSpec && (
-            <Button
-              onClick={generateSpec}
-              disabled={isGenerating}
-              className="gap-2 bg-blue-600 hover:bg-blue-500"
-            >
+            <Button onClick={generateSpec} disabled={isGenerating} className="gap-2 bg-blue-600 hover:bg-blue-500">
               <Zap className="w-4 h-4" />
               {isGenerating ? 'AI 생성 중...' : 'AI 기능 정의서 생성'}
             </Button>
           )}
-          {currentSpec && currentSpec.status === 'draft' && (
+
+          {currentSpec && (
             <>
               <Button onClick={generateSpec} disabled={isGenerating} variant="outline" size="sm" className="gap-1.5">
                 <RefreshCw className="w-3.5 h-3.5" />
-                재생성
+                {isFinalApproved ? '새 버전 생성' : '재생성'}
               </Button>
-              <Button
-                onClick={() => setIsEditing(!isEditing)}
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                수정
-              </Button>
-              <Button
-                onClick={approveSpec}
-                disabled={isApproving}
-                size="sm"
-                className="gap-1.5 bg-green-600 hover:bg-green-500"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                {isApproving ? '승인 중...' : '승인'}
-              </Button>
+
+              {!isFinalApproved && (
+                <Button onClick={() => setIsEditing(!isEditing)} variant="outline" size="sm" className="gap-1.5">
+                  <Edit className="w-3.5 h-3.5" />
+                  수정
+                </Button>
+              )}
+
+              {/* 외주사 전송 버튼 — draft 상태에서 전송 가능 */}
+              {!isFinalApproved && (
+                <Button
+                  onClick={sendToVendor}
+                  disabled={isSending}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {isSending ? '전송 중...' : collabStatus === 'sent' || collabStatus === 'vendor_viewed' || collabStatus === 'vendor_reviewed' ? '재전송' : '외주사에게 전송'}
+                </Button>
+              )}
+
+              {/* 최종 승인 — 외주사가 봤거나 수정 제안 있을 때 강조 */}
+              {!isFinalApproved && (
+                <Button
+                  onClick={approveSpec}
+                  disabled={isApproving}
+                  size="sm"
+                  className={`gap-1.5 ${
+                    collabStatus === 'vendor_reviewed'
+                      ? 'bg-orange-600 hover:bg-orange-500'
+                      : 'bg-green-600 hover:bg-green-500'
+                  }`}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {isApproving ? '승인 중...' : '최종 승인'}
+                </Button>
+              )}
             </>
-          )}
-          {isApproved && (
-            <Button onClick={generateSpec} disabled={isGenerating} variant="outline" size="sm" className="gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5" />
-              새 버전 생성
-            </Button>
           )}
         </div>
       </div>
+
+      {/* 협업 상태 안내 바 */}
+      {currentSpec && statusInfo.desc && (
+        <div className={`mb-4 p-3 rounded-lg border text-sm flex items-start gap-2 ${
+          collabStatus === 'vendor_reviewed' ? 'bg-orange-50 border-orange-200 text-orange-800' :
+          collabStatus === 'final_approved' ? 'bg-green-50 border-green-200 text-green-800' :
+          collabStatus === 'sent' || collabStatus === 'vendor_viewed' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+          'bg-yellow-50 border-yellow-200 text-yellow-800'
+        }`}>
+          {collabStatus === 'vendor_reviewed' ? <MessageSquare className="w-4 h-4 flex-shrink-0 mt-0.5" /> :
+           collabStatus === 'final_approved' ? <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /> :
+           collabStatus === 'vendor_viewed' ? <Eye className="w-4 h-4 flex-shrink-0 mt-0.5" /> :
+           <Send className="w-4 h-4 flex-shrink-0 mt-0.5" />}
+          <div>
+            <span className="font-semibold">[{statusInfo.label}]</span> {statusInfo.desc}
+            {collabStatus === 'draft' && (
+              <span className="ml-2 text-xs opacity-70">↑ "외주사에게 전송" 버튼을 눌러 확인 요청을 보내세요</span>
+            )}
+            {collabStatus === 'vendor_reviewed' && (
+              <span className="ml-2 text-xs opacity-70">↓ 아래 "외주사 수정 제안" 탭을 확인하세요</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3단계 플로우 표시 */}
+      {currentSpec && !isFinalApproved && (
+        <div className="flex items-center gap-1 mb-5 text-xs text-slate-500">
+          <span className={`px-2 py-1 rounded-full font-medium ${collabStatus === 'draft' ? 'bg-blue-600 text-white' : 'bg-green-100 text-green-700'}`}>
+            1. 초안 작성
+          </span>
+          <ChevronRight className="w-3 h-3" />
+          <span className={`px-2 py-1 rounded-full font-medium ${['sent', 'vendor_viewed'].includes(collabStatus) ? 'bg-blue-600 text-white' : ['vendor_reviewed', 'final_approved'].includes(collabStatus) ? 'bg-green-100 text-green-700' : 'bg-slate-100'}`}>
+            2. 외주사 검토
+          </span>
+          <ChevronRight className="w-3 h-3" />
+          <span className={`px-2 py-1 rounded-full font-medium ${['vendor_reviewed'].includes(collabStatus) ? 'bg-orange-500 text-white' : collabStatus === 'final_approved' ? 'bg-green-100 text-green-700' : 'bg-slate-100'}`}>
+            3. 최종 승인
+          </span>
+        </div>
+      )}
 
       {/* No spec yet */}
       {!currentSpec && (
@@ -244,6 +347,12 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
           <TabsList className="mb-4">
             <TabsTrigger value="structured">구조화 보기</TabsTrigger>
             <TabsTrigger value="raw">전문 보기</TabsTrigger>
+            {vendorSuggestionText && (
+              <TabsTrigger value="vendor_suggestion" className="text-orange-600">
+                <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                외주사 수정 제안
+              </TabsTrigger>
+            )}
             {isEditing && <TabsTrigger value="edit">수정 모드</TabsTrigger>}
           </TabsList>
 
@@ -267,28 +376,18 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
               <SpecSection title="수용 기준" icon={CheckCircle} content={currentSpec.acceptance_criteria} />
             </div>
 
-            {(currentSpec.vendor_expected_questions || currentSpec.vendor_answer_drafts) && (
+            {currentSpec.vendor_expected_questions && (
               <Card className="border-purple-100">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm text-purple-700">외주사 예상 질문 & 답변 초안</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {currentSpec.vendor_expected_questions && (
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">예상 질문</p>
-                      <div className="bg-purple-50 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">
-                        {currentSpec.vendor_expected_questions}
-                      </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1">예상 질문</p>
+                    <div className="bg-purple-50 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">
+                      {currentSpec.vendor_expected_questions}
                     </div>
-                  )}
-                  {currentSpec.vendor_answer_drafts && (
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">답변 초안</p>
-                      <div className="bg-blue-50 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">
-                        {currentSpec.vendor_answer_drafts}
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -303,6 +402,48 @@ export default function SpecPageClient({ projectId, feature, spec }: SpecPageCli
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* 외주사 수정 제안 탭 */}
+          {vendorSuggestionText && (
+            <TabsContent value="vendor_suggestion">
+              <Card className="border-orange-200 bg-orange-50/30">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-orange-600" />
+                    <CardTitle className="text-sm text-orange-800">외주사 수정 제안</CardTitle>
+                  </div>
+                  <p className="text-xs text-orange-700 mt-1">
+                    외주사가 이 기능 정의서에 수정 의견을 남겼습니다. 검토 후 직접 정의서를 수정하거나 최종 승인하세요.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-white border border-orange-200 rounded-lg p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {vendorSuggestionText}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      onClick={() => setIsEditing(true)}
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 border-orange-300 text-orange-700"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      제안 반영해서 정의서 수정
+                    </Button>
+                    <Button
+                      onClick={approveSpec}
+                      disabled={isApproving}
+                      size="sm"
+                      className="gap-1.5 bg-green-600 hover:bg-green-500"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      그대로 최종 승인
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {isEditing && (
             <TabsContent value="edit">

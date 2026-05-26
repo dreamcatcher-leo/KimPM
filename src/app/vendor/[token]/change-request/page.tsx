@@ -33,7 +33,7 @@ function SubmittedView({
     <div>
       <h1 className="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
         <GitBranch className="w-5 h-5" />
-        범위 변경 요청
+        변경 요청
       </h1>
       <p className="text-sm text-slate-500 mb-6">요청이 접수되었습니다</p>
 
@@ -193,10 +193,10 @@ export default function VendorChangeRequestPage() {
       {/* 헤더 */}
       <h1 className="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
         <GitBranch className="w-5 h-5" />
-        범위 변경 요청
+        변경 요청
       </h1>
       <p className="text-sm text-slate-500 mb-2">
-        개발 범위·일정 변경이 필요할 때 대표에게 먼저 승인을 받으세요
+        개발 범위·기능 정의서·일정 변경이 필요할 때 대표에게 먼저 승인을 받으세요
       </p>
 
       {/* 경고 안내 */}
@@ -205,8 +205,8 @@ export default function VendorChangeRequestPage() {
         <div>
           <p className="text-xs font-semibold text-amber-800">승인 전 착수 금지</p>
           <p className="text-xs text-amber-700 mt-0.5">
-            승인 전에 범위 밖 작업을 시작하면 비용·일정 분쟁이 발생할 수 있습니다.
-            반드시 대표 승인 후 착수하세요.
+            기능 정의서 변경, 범위 조정, 일정 변경 등 모든 변경 사항은 대표 승인 후 착수하세요.
+            승인 전 작업 시 비용·일정 분쟁이 발생할 수 있습니다.
           </p>
         </div>
       </div>
@@ -395,7 +395,7 @@ export default function VendorChangeRequestPage() {
                !form.title.trim() ? '제목을 입력해주세요' :
                form.content.trim().length < CONTENT_MIN ? `내용을 ${CONTENT_MIN}자 이상 작성해주세요` :
                form.reason.trim().length < REASON_MIN ? `사유를 ${REASON_MIN}자 이상 작성해주세요` :
-               '범위 변경 요청 제출'}
+               '변경 요청 제출'}
             </Button>
 
           </CardContent>

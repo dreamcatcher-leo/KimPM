@@ -181,9 +181,7 @@ function generateFallbackSpec(feature: Record<string, unknown>, projectGoal: str
   const fname = String(feature.name || '')
   const fdesc = String(feature.description || '상세 설명이 입력되지 않았습니다.')
   const feffect = String(feature.expected_effect || '기대 효과가 입력되지 않았습니다.')
-  const fcategory = String(feature.category || '').replace(/_/g, ' ')
   const fpriority = String(feature.priority_group || '')
-  const fkey = String(feature.order_key || '')
 
   return `---
 ## 기능명
@@ -191,8 +189,11 @@ ${fname}
 
 ## 기능 배경
 [AI 초안 — 직접 수정 필요]
-프로젝트 "${projectName}"의 ${fpriority} 우선순위 기능입니다.
-${fdesc}
+프로젝트: ${projectName}
+목표: ${projectGoal}
+우선순위: ${fpriority}
+
+기능 설명: ${fdesc}
 
 ## 현재 문제
 [직접 작성 필요]
@@ -202,8 +203,9 @@ ${fdesc}
 
 ## 관련 사용자
 [직접 작성 필요]
-- 주요 사용자: (예: 보호자, 도그워커, 관리자)
-- 각 사용자의 니즈:
+이 프로젝트의 실제 사용자 유형과 각자의 니즈를 작성해주세요.
+- 사용자 유형 1: 니즈
+- 사용자 유형 2: 니즈
 
 ## 포함 범위 (In Scope)
 [직접 작성 필요]

@@ -60,7 +60,10 @@ export async function POST(request: NextRequest) {
         .order('week_start', { ascending: false }).limit(1),
       admin.from('reports').select('blocker').eq('project_id', project_id)
         .not('blocker', 'is', null).order('report_date', { ascending: false }).limit(5),
-      admin.from('projects').select('discord_webhook_url, discord_webhook_daily, discord_webhook_mustcheck, discord_webhook_risk, discord_webhook_decision, vendor_name').eq('id', project_id).single(),
+      // 2채널: discord_webhook_daily + discord_webhook_decision (구버전 discord_webhook_url 폴백)
+      admin.from('projects').select(
+        'discord_webhook_url, discord_webhook_daily, discord_webhook_decision, vendor_name'
+      ).eq('id', project_id).single(),
     ])
 
     // Generate AI assessment
@@ -142,13 +145,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Discord notifications — 채널별 분리
-    // daily 채널: discord_webhook_daily 우선, 없으면 discord_webhook_url(구버전 호환) 사용
+    // ─── Discord 알림 — 2채널 구조 ─────────────────────────────────────────
+    // 📊 daily 채널: 일일보고 + AI 리스크 (discord_webhook_daily 우선, discord_webhook_url 폴백)
     const dailyWebhook = project?.discord_webhook_daily || project?.discord_webhook_url
-    const mustcheckWebhook = project?.discord_webhook_mustcheck || project?.discord_webhook_url
-    const riskWebhook = project?.discord_webhook_risk || project?.discord_webhook_url
+    // ⚖️ decision 채널: Must-Check (discord_webhook_decision 우선, discord_webhook_url 폴백)
+    const decisionWebhook = project?.discord_webhook_decision || project?.discord_webhook_url
 
     if (dailyWebhook) {
+      // 일일 보고 알림
       await notifyDailyReport(
         dailyWebhook,
         project_id,
@@ -159,31 +163,31 @@ export async function POST(request: NextRequest) {
         blocker,
         report_date
       )
+
+      // AI 리스크 감지 → daily 채널 (일일보고에 포함)
+      if (savedAssessment?.alignment_signal === '점검_권장') {
+        await notifyRisk(
+          dailyWebhook,
+          project_id,
+          `${report_date}: 주간 계획 정합성 낮음`,
+          '주의',
+          'Weekly_Plan_미정합',
+          savedAssessment.ai_comment || '보고 내용과 주간 계획의 정합성이 낮습니다.'
+        )
+      }
     }
 
-    // Must-Check 알림 → mustcheck 채널
-    if (mustcheckWebhook && mustCheckTriggers.length > 0) {
+    // Must-Check 알림 → decision 채널
+    if (decisionWebhook && mustCheckTriggers.length > 0) {
       for (const trigger of mustCheckTriggers) {
         await notifyMustCheck(
-          mustcheckWebhook,
+          decisionWebhook,
           project_id,
           trigger.title,
           trigger.trigger_type,
           trigger.description
         )
       }
-    }
-
-    // 리스크 알림 → risk 채널 (점검_권장 신호 발생 시)
-    if (riskWebhook && savedAssessment?.alignment_signal === '점검_권장') {
-      await notifyRisk(
-        riskWebhook,
-        project_id,
-        `${report_date}: 주간 계획 정합성 낮음`,
-        '주의',
-        'Weekly_Plan_미정합',
-        savedAssessment.ai_comment || '보고 내용과 주간 계획의 정합성이 낮습니다.'
-      )
     }
 
     return NextResponse.json({

@@ -1,21 +1,31 @@
 // Discord Webhook Integration
 // =====================================================
-// 4채널 분리 구조
-//  - daily    : 일일보고 (notifyDailyReport, notifyVendorReportReminder, sendFounderBrief)
-//  - mustcheck: Must-Check 경보 (notifyMustCheck)
-//  - risk     : 리스크 감지 (notifyRisk)
-//  - decision : 의사결정·완료·주간계획 (notifyCompletion, notifyWeeklyPlan)
+// 2채널 구조 (2025년 재설계)
+//
+//  📊 daily (일일보고 채널) — 오전 9시 고정
+//     - notifyDailyReport    : 외주사 일일 보고 수신 시
+//     - sendFounderBrief     : AI 일일 요약 + 리스크 분석 (오전 9시 cron)
+//     - notifyRisk           : AI 리스크 감지
+//     - notifyVendorReportReminder : 보고 독려
+//
+//  ⚖️ decision (의사결정 채널) — 발생 즉시
+//     - notifyChangeRequest  : 외주사 변경 요청
+//     - notifyQuestion       : 외주사 질문/협의
+//     - notifyCompletion     : 기능 완료 신청
+//     - notifyWeeklyPlan     : 주간 계획 공유
+//     - notifyMustCheck      : Must-Check 등록
 // =====================================================
 
 export interface DiscordWebhooks {
-  /** 일일보고 채널 */
+  /** 일일보고 채널 (일일보고 + AI 리스크 분석, 오전 9시 고정) */
   daily?: string | null
-  /** Must-Check 경보 채널 */
-  mustcheck?: string | null
-  /** 리스크 감지 채널 */
-  risk?: string | null
-  /** 의사결정 / 완료 알림 채널 */
+  /** 의사결정 채널 (변경 요청 + 질문, 발생 즉시) */
   decision?: string | null
+  // ── 구버전 호환 (deprecated) ──
+  /** @deprecated discord_webhook_daily로 통합됨 */
+  mustcheck?: string | null
+  /** @deprecated discord_webhook_daily로 통합됨 */
+  risk?: string | null
 }
 
 interface DiscordEmbed {
@@ -44,6 +54,7 @@ const COLORS = {
   blue: 0x3b82f6,
   purple: 0x8b5cf6,
   gray: 0x6b7280,
+  orange: 0xf97316,
 }
 
 async function sendWebhook(webhookUrl: string, message: DiscordMessage): Promise<boolean> {
@@ -61,7 +72,7 @@ async function sendWebhook(webhookUrl: string, message: DiscordMessage): Promise
 }
 
 // =====================================================
-// 외주사 일일 보고 알림 → daily 채널
+// 📊 DAILY 채널 — 일일보고 수신 알림
 // =====================================================
 export async function notifyDailyReport(
   webhookUrl: string,
@@ -112,7 +123,7 @@ export async function notifyDailyReport(
 }
 
 // =====================================================
-// Founder Daily Brief 발송 → daily 채널
+// 📊 DAILY 채널 — Founder Daily Brief (AI 요약 + 리스크 분석)
 // =====================================================
 export async function sendFounderBrief(
   webhookUrl: string,
@@ -169,7 +180,7 @@ export async function sendFounderBrief(
 }
 
 // =====================================================
-// 리스크 알림 → risk 채널
+// 📊 DAILY 채널 — AI 리스크 감지
 // =====================================================
 export async function notifyRisk(
   webhookUrl: string,
@@ -191,7 +202,7 @@ export async function notifyRisk(
 
   const message: DiscordMessage = {
     embeds: [{
-      title: `${levelEmoji} 리스크 감지 — ${riskTitle}`,
+      title: `${levelEmoji} AI 리스크 감지 — ${riskTitle}`,
       description,
       color: levelColor,
       fields: [
@@ -212,7 +223,127 @@ export async function notifyRisk(
 }
 
 // =====================================================
-// 주간 계획 공유 → decision 채널
+// 📊 DAILY 채널 — 보고 독려
+// =====================================================
+export async function notifyVendorReportReminder(
+  webhookUrl: string,
+  vendorAccessUrl: string,
+  date: string
+): Promise<boolean> {
+  const message: DiscordMessage = {
+    embeds: [{
+      title: `📝 ${date} 일일 보고 안내`,
+      description: '오늘 작업 내용을 보고해 주시면 감사하겠습니다. 짧은 한 줄 요약만으로도 충분합니다.',
+      color: COLORS.blue,
+      fields: [
+        {
+          name: '🔗 보고하기 (약 30초)',
+          value: `[외주사 포털 바로가기](${vendorAccessUrl}/report)`,
+          inline: false,
+        },
+      ],
+      footer: { text: '김PM — AI 외주 개발 관리' },
+      timestamp: new Date().toISOString(),
+    }],
+  }
+
+  return sendWebhook(webhookUrl, message)
+}
+
+// =====================================================
+// ⚖️ DECISION 채널 — 변경 요청 (즉시)
+// =====================================================
+export async function notifyChangeRequest(
+  webhookUrl: string,
+  projectId: string,
+  title: string,
+  content: string,
+  reason: string,
+  scheduleImpact?: string | null
+): Promise<boolean> {
+  const hasImpact = scheduleImpact && scheduleImpact !== '없음' && scheduleImpact !== ''
+  const message: DiscordMessage = {
+    content: '**⚡ 외주사 변경 요청 — 검토 필요**',
+    embeds: [{
+      title: `🔀 변경 요청: ${title}`,
+      description: content,
+      color: hasImpact ? COLORS.orange : COLORS.blue,
+      fields: [
+        { name: '변경 사유', value: reason, inline: false },
+        ...(hasImpact ? [{ name: '⏱️ 일정 영향', value: scheduleImpact!, inline: true }] : []),
+        {
+          name: '🔗 변경 요청 검토',
+          value: `[변경 요청 목록 확인](${APP_URL}/projects/${projectId}/change-requests)`,
+          inline: false,
+        },
+      ],
+      footer: { text: '김PM — 승인 전 착수 금지' },
+      timestamp: new Date().toISOString(),
+    }],
+  }
+
+  return sendWebhook(webhookUrl, message)
+}
+
+// =====================================================
+// ⚖️ DECISION 채널 — 질문/협의 요청 (즉시)
+// =====================================================
+export async function notifyQuestion(
+  webhookUrl: string,
+  projectId: string,
+  question: string,
+  scheduleImpact?: string | null
+): Promise<boolean> {
+  const hasImpact = scheduleImpact && scheduleImpact !== '없음' && scheduleImpact !== ''
+  const message: DiscordMessage = {
+    content: hasImpact ? '**🔴 긴급 질문 — 일정 영향 있음**' : '**💬 외주사 질문 등록**',
+    embeds: [{
+      title: '❓ 외주사 협의 요청',
+      description: question,
+      color: hasImpact ? COLORS.red : COLORS.purple,
+      fields: [
+        ...(hasImpact ? [{ name: '⏱️ 일정 영향', value: scheduleImpact!, inline: true }] : []),
+        {
+          name: '🔗 질문 답변하기',
+          value: `[의사결정 페이지](${APP_URL}/projects/${projectId}/decisions)`,
+          inline: false,
+        },
+      ],
+      footer: { text: '김PM — 빠른 답변이 일정에 도움이 됩니다' },
+      timestamp: new Date().toISOString(),
+    }],
+  }
+
+  return sendWebhook(webhookUrl, message)
+}
+
+// =====================================================
+// ⚖️ DECISION 채널 — 기능 완료 신청
+// =====================================================
+export async function notifyCompletion(
+  webhookUrl: string,
+  featureName: string,
+  vendorName: string,
+  message: string
+): Promise<boolean> {
+  const discordMessage: DiscordMessage = {
+    embeds: [{
+      title: `🎉 기능 완료 — ${featureName}`,
+      description: message,
+      color: COLORS.green,
+      fields: [
+        { name: '완료한 팀', value: vendorName, inline: true },
+      ],
+      footer: { text: '김PM — AI 외주 개발 관리' },
+      timestamp: new Date().toISOString(),
+    }],
+  }
+
+  return sendWebhook(webhookUrl, discordMessage)
+}
+
+// =====================================================
+// ⚖️ DECISION 채널 — 주간 계획 공유
 // =====================================================
 export async function notifyWeeklyPlan(
   webhookUrl: string,
@@ -249,32 +380,7 @@ export async function notifyWeeklyPlan(
 }
 
 // =====================================================
-// 완료 축하 알림 → decision 채널
-// =====================================================
-export async function notifyCompletion(
-  webhookUrl: string,
-  featureName: string,
-  vendorName: string,
-  message: string
-): Promise<boolean> {
-  const discordMessage: DiscordMessage = {
-    embeds: [{
-      title: `🎉 기능 완료 — ${featureName}`,
-      description: message,
-      color: COLORS.green,
-      fields: [
-        { name: '완료한 팀', value: vendorName, inline: true },
-      ],
-      footer: { text: '김PM — AI 외주 개발 관리' },
-      timestamp: new Date().toISOString(),
-    }],
-  }
-
-  return sendWebhook(webhookUrl, discordMessage)
-}
-
-// =====================================================
-// Must-Check 알림 → mustcheck 채널
+// ⚖️ DECISION 채널 — Must-Check 등록
 // =====================================================
 export async function notifyMustCheck(
   webhookUrl: string,
@@ -298,34 +404,6 @@ export async function notifyMustCheck(
         },
       ],
       footer: { text: '김PM — 대표 직접 확인 필요' },
-      timestamp: new Date().toISOString(),
-    }],
-  }
-
-  return sendWebhook(webhookUrl, message)
-}
-
-// =====================================================
-// 외주사에게 보고 독려 → daily 채널 (외주사 포털 웹훅)
-// =====================================================
-export async function notifyVendorReportReminder(
-  webhookUrl: string,
-  vendorAccessUrl: string,
-  date: string
-): Promise<boolean> {
-  const message: DiscordMessage = {
-    embeds: [{
-      title: `📝 ${date} 일일 보고 안내`,
-      description: '오늘 작업 내용을 보고해 주시면 감사하겠습니다. 짧은 한 줄 요약만으로도 충분합니다.',
-      color: COLORS.blue,
-      fields: [
-        {
-          name: '🔗 보고하기 (약 30초)',
-          value: `[외주사 포털 바로가기](${vendorAccessUrl}/report)`,
-          inline: false,
-        },
-      ],
-      footer: { text: '김PM — AI 외주 개발 관리' },
       timestamp: new Date().toISOString(),
     }],
   }

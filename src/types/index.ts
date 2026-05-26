@@ -52,14 +52,14 @@ export interface Project {
   discord_founder_dm_channel: string | null
   discord_webhook_url: string | null
   discord_channel_id: string | null
-  /** 채널 분리 — 일일보고 전용 웹훅 */
+  /** 📊 일일보고 채널 — 일일보고 + AI 리스크 분석 (오전 9시 고정) */
   discord_webhook_daily: string | null
-  /** 채널 분리 — Must-Check 경보 전용 웹훅 */
-  discord_webhook_mustcheck: string | null
-  /** 채널 분리 — 리스크 감지 전용 웹훅 */
-  discord_webhook_risk: string | null
-  /** 채널 분리 — 의사결정 / 완료 알림 전용 웹훅 */
+  /** ⚖️ 의사결정 채널 — 변경 요청 + 질문 (발생 즉시) */
   discord_webhook_decision: string | null
+  /** @deprecated 2채널로 통합됨 */
+  discord_webhook_mustcheck: string | null
+  /** @deprecated discord_webhook_daily로 통합됨 */
+  discord_webhook_risk: string | null
   vendor_report_reminder_time: string | null
   created_at: string
   updated_at: string

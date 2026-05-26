@@ -16,6 +16,11 @@ const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 export async function generateSpec(feature: Feature, projectGoal: string): Promise<string> {
   const prompt = `당신은 경험 많은 프로덕트 매니저입니다. 다음 기능에 대한 상세 기능 정의서를 작성해주세요.
 
+⚠️ 핵심 주의사항:
+- 반드시 아래 "프로젝트 목표"와 "기능명"만을 기반으로 작성하세요.
+- 다른 서비스(비포펫, 강아지 도그워킹, 반려동물 등)의 사례를 절대 참고하거나 언급하지 마세요.
+- 모든 예시와 사용자 유형은 이 프로젝트의 실제 맥락에서 도출하세요.
+
 프로젝트 목표: ${projectGoal}
 
 기능 정보:
@@ -27,7 +32,7 @@ export async function generateSpec(feature: Feature, projectGoal: string): Promi
 - 기대 효과: ${feature.expected_effect || '없음'}
 
 아래 형식으로 정확히 작성해주세요. 각 섹션은 명확하고 실행 가능한 수준으로 작성해주세요.
-※ 프로젝트 목표와 기능명을 기준으로 작성하고, 다른 프로젝트 사례를 섞지 마세요.
+※ 프로젝트 목표와 기능명을 기준으로 작성하고, 다른 프로젝트 사례를 절대 섞지 마세요.
 
 ---
 ## 기능명

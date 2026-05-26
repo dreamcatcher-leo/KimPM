@@ -29,7 +29,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
   const [saving, setSaving] = useState(false)
   // 채널별 테스트 상태: null=미시도, true=성공, false=실패
   const [testStatus, setTestStatus] = useState<Record<string, boolean | null>>({
-    daily: null, mustcheck: null, risk: null, decision: null,
+    daily: null, decision: null,
   })
   const [testingChannel, setTestingChannel] = useState<string | null>(null)
 
@@ -88,17 +88,13 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
   }
 
   // 채널별 테스트 — 서버 API 경유로 CORS 문제 없음
-  const testChannelWebhook = async (channelKey: 'daily' | 'mustcheck' | 'risk' | 'decision') => {
+  const testChannelWebhook = async (channelKey: 'daily' | 'decision') => {
     const urlMap = {
       daily: settings.discord_webhook_daily,
-      mustcheck: settings.discord_webhook_mustcheck,
-      risk: settings.discord_webhook_risk,
       decision: settings.discord_webhook_decision,
     }
     const labelMap = {
-      daily: '📋 일일보고',
-      mustcheck: '🟣 Must-Check',
-      risk: '🔴 리스크',
+      daily: '📊 일일보고',
       decision: '⚖️ 의사결정',
     }
     const url = urlMap[channelKey]
@@ -254,7 +250,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
             <CardTitle className="text-base">Discord 알림 설정</CardTitle>
           </div>
           <CardDescription className="text-xs">
-            알림 종류마다 별도 채널로 분리해서 받을 수 있습니다. 각 채널에서 웹훅 URL을 발급 후 입력하세요.
+            2개 채널로 분리해서 받을 수 있습니다. 각 Discord 채널에서 웹훅 URL을 발급 후 입력하세요.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -265,57 +261,66 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
             <p>채널 설정 → 연동 → 웹훅 → 새 웹훅 → URL 복사</p>
           </div>
 
-          {/* 4개 채널 분리 입력 */}
+          {/* 2채널 분리 입력 */}
           {(
             [
               {
                 key: 'daily' as const,
-                label: '📋 일일보고 채널',
-                desc: '외주사가 보고를 제출할 때마다 이 채널로 알림이 옵니다.',
-                field: 'discord_webhook_daily' as const,
+                label: '📊 일일보고 채널',
                 badge: 'bg-blue-100 text-blue-700',
-              },
-              {
-                key: 'mustcheck' as const,
-                label: '🟣 Must-Check 채널',
-                desc: 'AI가 긴급 확인이 필요하다고 판단했을 때 이 채널로 경보가 옵니다.',
-                field: 'discord_webhook_mustcheck' as const,
-                badge: 'bg-purple-100 text-purple-700',
-              },
-              {
-                key: 'risk' as const,
-                label: '🔴 리스크 채널',
-                desc: '보고 패턴 이상, 일정 지연 등 위험 신호가 감지되면 이 채널로 알림이 옵니다.',
-                field: 'discord_webhook_risk' as const,
-                badge: 'bg-red-100 text-red-700',
+                field: 'discord_webhook_daily' as const,
+                desc: '오전 9시 고정 발송',
+                bullets: [
+                  '외주사 일일 보고 수신 알림',
+                  'AI 리스크 분석 결과 (보고 패턴 이상, 일정 지연 등)',
+                  'Founder Daily Brief (AI 요약)',
+                ],
               },
               {
                 key: 'decision' as const,
                 label: '⚖️ 의사결정 채널',
-                desc: '기능 완료 신청, 범위 변경 요청, 주간 계획 공유 알림이 이 채널로 옵니다.',
+                badge: 'bg-orange-100 text-orange-700',
                 field: 'discord_webhook_decision' as const,
-                badge: 'bg-yellow-100 text-yellow-700',
+                desc: '발생 즉시 발송',
+                bullets: [
+                  '외주사 변경 요청 (즉시 검토 필요)',
+                  '외주사 질문/협의 등록',
+                  '기능 완료 신청',
+                  'Must-Check 경보',
+                ],
               },
             ] as const
           ).map(ch => (
-            <div key={ch.key} className="border border-gray-100 rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
+            <div key={ch.key} className="border border-gray-100 rounded-xl p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ch.badge}`}>
-                    {ch.label}
-                  </span>
-                  <p className="text-xs text-gray-500 mt-1">{ch.desc}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${ch.badge}`}>
+                      {ch.label}
+                    </span>
+                    <span className="text-xs text-gray-400">{ch.desc}</span>
+                  </div>
+                  <ul className="text-xs text-gray-500 space-y-0.5 ml-1">
+                    {ch.bullets.map((b, i) => (
+                      <li key={i} className="flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-gray-300 flex-shrink-0" />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                {testStatus[ch.key] === true && (
-                  <span className="flex items-center gap-1 text-xs text-green-600 font-medium flex-shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> 연결됨
-                  </span>
-                )}
-                {testStatus[ch.key] === false && (
-                  <span className="flex items-center gap-1 text-xs text-red-500 font-medium flex-shrink-0">
-                    <XCircle className="w-3.5 h-3.5" /> 실패
-                  </span>
-                )}
+                <div className="flex-shrink-0">
+                  {testStatus[ch.key] === true && (
+                    <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> 연결됨
+                    </span>
+                  )}
+                  {testStatus[ch.key] === false && (
+                    <span className="flex items-center gap-1 text-xs text-red-500 font-medium">
+                      <XCircle className="w-3.5 h-3.5" /> 실패
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <Input
@@ -337,10 +342,10 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
             </div>
           ))}
 
-          {/* 구버전 호환 — 단일 웹훅 (숨겨진 폴백) */}
+          {/* 구버전 호환 — 단일 웹훅 폴백 */}
           <details className="text-xs">
             <summary className="cursor-pointer text-gray-400 hover:text-gray-600">
-              이전 설정 (단일 채널 — 채널 미분리 시 폴백으로 사용됨)
+              이전 설정 (단일 채널 — 위 채널 미설정 시 폴백으로 사용됨)
             </summary>
             <div className="mt-2">
               <Input
@@ -349,7 +354,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
                 placeholder="https://discord.com/api/webhooks/..."
                 className="font-mono text-xs"
               />
-              <p className="text-gray-400 mt-1">위 4개 채널 중 URL이 비어있는 채널의 폴백으로 동작합니다.</p>
+              <p className="text-gray-400 mt-1">위 2개 채널 URL이 비어있을 때 폴백으로 동작합니다.</p>
             </div>
           </details>
 
@@ -365,7 +370,7 @@ export default function SettingsClient({ project, accessLinks }: SettingsClientP
                   onChange={e => setSettings(s => ({ ...s, brief_send_time: e.target.value }))}
                   className="mt-1"
                 />
-                <p className="text-xs text-gray-400 mt-1">매일 대표님께 브리프 전송 (일일보고 채널)</p>
+                <p className="text-xs text-gray-400 mt-1">매일 대표님께 브리프 전송 (📊 일일보고 채널)</p>
               </div>
               <div>
                 <Label htmlFor="reminder_time" className="text-sm">외주사 보고 리마인더</Label>

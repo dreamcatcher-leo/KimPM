@@ -2,8 +2,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CheckCircle, FileText, Eye, AlertCircle, Info, Hammer, Clock, Trophy } from 'lucide-react'
+import { CheckCircle, FileText, Eye, AlertCircle, Info, Hammer, Clock, Trophy, MessageSquare } from 'lucide-react'
 import type { AccessLink, Project, Feature, Spec } from '@/types'
+import VendorSpecReviewForm from './VendorSpecReviewForm'
 
 // 외주사가 이 페이지를 열람하면 viewed_at 기록
 async function markSpecsViewed(specIds: string[]) {
@@ -27,10 +28,12 @@ function FeatureSpecCard({
   feature,
   spec,
   isNew,
+  projectId,
 }: {
   feature: Feature
   spec: Spec | undefined
   isNew: boolean
+  projectId: string
 }) {
   const isViewed = spec?.viewed_at
   const sentAt = spec?.sent_at
@@ -229,6 +232,24 @@ function FeatureSpecCard({
               </TabsContent>
             )}
           </Tabs>
+
+          {/* ── 수정 제안 폼 (대표가 전송한 spec에만 표시) ── */}
+          {spec.sent_at && (
+            <VendorSpecReviewForm
+              specId={spec.id}
+              featureName={feature.name}
+              projectId={projectId}
+            />
+          )}
+          {/* sent_at 없어도 열람 자체가 됐으면 수정 제안 가능 */}
+          {!spec.sent_at && spec.viewed_at && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <MessageSquare className="w-3.5 h-3.5" />
+                수정 제안은 대표가 정의서를 전송한 후 가능합니다.
+              </div>
+            </div>
+          )}
         </CardContent>
       ) : (
         <CardContent>
@@ -410,6 +431,7 @@ export default async function VendorSpecsPage({
                     feature={feature}
                     spec={specMap[feature.id]}
                     isNew={isNew(feature.id)}
+                    projectId={link.project_id}
                   />
                 ))}
               </div>
@@ -433,6 +455,7 @@ export default async function VendorSpecsPage({
                     feature={feature}
                     spec={specMap[feature.id]}
                     isNew={isNew(feature.id)}
+                    projectId={link.project_id}
                   />
                 ))}
               </div>
@@ -457,6 +480,7 @@ export default async function VendorSpecsPage({
                     feature={feature}
                     spec={specMap[feature.id]}
                     isNew={isNew(feature.id)}
+                    projectId={link.project_id}
                   />
                 ))}
               </div>

@@ -45,53 +45,45 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   approved: { label: '완료', color: 'bg-green-100 text-green-700' },
 }
 
-// Discord 4채널 설정
+// Discord 2채널 설정
 interface DiscordWebhooks {
   discord_webhook_daily: string
+  discord_webhook_decision: string
+  // 구버전 호환 필드 (deprecated)
   discord_webhook_mustcheck: string
   discord_webhook_risk: string
-  discord_webhook_decision: string
 }
 
 const DISCORD_CHANNELS = [
   {
     key: 'discord_webhook_daily' as keyof DiscordWebhooks,
-    label: '📋 일일보고 채널',
-    emoji: '📋',
+    label: '📊 일일보고 채널',
+    emoji: '📊',
     colorBadge: 'bg-blue-100 text-blue-700',
     colorBorder: 'border-blue-200',
-    desc: '외주사가 매일 보고를 제출하면 이 채널로 알림이 옵니다.',
+    desc: '오전 9시 고정 발송',
+    bullets: [
+      '외주사 일일 보고 수신 알림',
+      'AI 리스크 분석 결과',
+      'Founder Daily Brief (AI 요약)',
+    ],
     recommended: true,
     example: '예) #daily-report',
-  },
-  {
-    key: 'discord_webhook_mustcheck' as keyof DiscordWebhooks,
-    label: '🟣 Must-Check 채널',
-    emoji: '🟣',
-    colorBadge: 'bg-purple-100 text-purple-700',
-    colorBorder: 'border-purple-200',
-    desc: 'AI가 "대표님이 직접 봐야 한다"고 판단한 긴급 경보 채널입니다.',
-    recommended: true,
-    example: '예) #must-check',
-  },
-  {
-    key: 'discord_webhook_risk' as keyof DiscordWebhooks,
-    label: '🔴 리스크 채널',
-    emoji: '🔴',
-    colorBadge: 'bg-red-100 text-red-700',
-    colorBorder: 'border-red-200',
-    desc: '보고 이상 감지, 일정 지연 등 위험 신호가 쌓이는 채널입니다.',
-    recommended: false,
-    example: '예) #risks',
   },
   {
     key: 'discord_webhook_decision' as keyof DiscordWebhooks,
     label: '⚖️ 의사결정 채널',
     emoji: '⚖️',
-    colorBadge: 'bg-yellow-100 text-yellow-700',
-    colorBorder: 'border-yellow-200',
-    desc: '외주사의 결정 요청, 기능 완료 신청, 주간 계획 공유 알림이 옵니다.',
-    recommended: false,
+    colorBadge: 'bg-orange-100 text-orange-700',
+    colorBorder: 'border-orange-200',
+    desc: '발생 즉시 발송',
+    bullets: [
+      '외주사 변경 요청 (즉시 검토 필요)',
+      '외주사 질문/협의 등록',
+      '기능 완료 신청',
+      'Must-Check 경보',
+    ],
+    recommended: true,
     example: '예) #decisions',
   },
 ] as const
@@ -114,9 +106,9 @@ export default function OnboardingPage() {
   // Discord 웹훅 상태
   const [webhooks, setWebhooks] = useState<DiscordWebhooks>({
     discord_webhook_daily: '',
+    discord_webhook_decision: '',
     discord_webhook_mustcheck: '',
     discord_webhook_risk: '',
-    discord_webhook_decision: '',
   })
   const [testingChannel, setTestingChannel] = useState<string | null>(null)
   const [testStatus, setTestStatus] = useState<Record<string, boolean | null>>({})
@@ -134,9 +126,9 @@ export default function OnboardingPage() {
         // 기존 설정 있으면 채움
         setWebhooks({
           discord_webhook_daily: proj.discord_webhook_daily || '',
+          discord_webhook_decision: proj.discord_webhook_decision || '',
           discord_webhook_mustcheck: proj.discord_webhook_mustcheck || '',
           discord_webhook_risk: proj.discord_webhook_risk || '',
-          discord_webhook_decision: proj.discord_webhook_decision || '',
         })
       }
       if (feats) setFeatures(feats)
@@ -232,9 +224,9 @@ export default function OnboardingPage() {
           .from('projects')
           .update({
             discord_webhook_daily: webhooks.discord_webhook_daily || null,
+            discord_webhook_decision: webhooks.discord_webhook_decision || null,
             discord_webhook_mustcheck: webhooks.discord_webhook_mustcheck || null,
             discord_webhook_risk: webhooks.discord_webhook_risk || null,
-            discord_webhook_decision: webhooks.discord_webhook_decision || null,
           })
           .eq('id', projectId)
 
@@ -496,7 +488,7 @@ export default function OnboardingPage() {
         )}
 
         {/* ═══════════════════════════════════════════════════
-            STEP 2 — Discord 4채널 설정
+            STEP 2 — Discord 2채널 설정
         ═══════════════════════════════════════════════════ */}
         {step === 'discord' && (
           <>
@@ -508,16 +500,15 @@ export default function OnboardingPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {/* 왜 4개인지 설명 */}
+                {/* 2채널 설명 */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
                   <p className="text-sm font-semibold text-blue-900 mb-2">
-                    📌 알림을 4개 채널로 분리하는 이유
+                    📌 2개 채널로 알림을 분리하는 이유
                   </p>
                   <div className="space-y-1.5 text-xs text-blue-800">
-                    <p>• <strong>일일보고</strong>는 매일 올라오는 정보성 메시지 — 일반 채널에 흘려보내도 됩니다</p>
-                    <p>• <strong>Must-Check</strong>는 긴급 경보 — 멘션·알림 ON으로 즉시 대응이 필요합니다</p>
-                    <p>• <strong>리스크</strong>는 위험 신호 누적 — 별도 채널에서 추이를 관찰하세요</p>
-                    <p>• <strong>의사결정</strong>은 외주사의 공식 요청 — 답변 전까지 외주사 작업이 멈춥니다</p>
+                    <p>• <strong>📊 일일보고 채널</strong> — 오전 9시에 자동 요약이 옵니다. 매일 흘려봐도 됩니다</p>
+                    <p>• <strong>⚖️ 의사결정 채널</strong> — 외주사의 변경요청·질문이 즉시 옵니다. 알림 ON 필수!</p>
+                    <p className="mt-2 text-blue-700">AI 리스크 분석 결과는 일일보고 채널에 포함됩니다.</p>
                   </div>
                 </div>
 
@@ -529,34 +520,44 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* 4개 채널 입력 */}
+                {/* 2채널 입력 */}
                 <div className="space-y-4">
                   {DISCORD_CHANNELS.map(ch => {
                     const ts = testStatus[ch.key]
                     return (
                       <div key={ch.key} className={`border rounded-xl p-4 ${ch.colorBorder} bg-white`}>
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ch.colorBadge}`}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${ch.colorBadge}`}>
                                 {ch.label}
                               </span>
+                              <span className="text-xs text-gray-400">{ch.desc}</span>
                               {ch.recommended && (
                                 <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
                                   필수 권장
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">{ch.desc}</p>
+                            <ul className="text-xs text-gray-500 space-y-0.5 ml-1">
+                              {'bullets' in ch && ch.bullets.map((b: string, i: number) => (
+                                <li key={i} className="flex items-center gap-1.5">
+                                  <span className="w-1 h-1 rounded-full bg-gray-300 flex-shrink-0" />
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                          {ts === true && (
-                            <span className="text-xs text-green-600 font-medium flex items-center gap-1 flex-shrink-0 ml-2">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> 연결됨
-                            </span>
-                          )}
-                          {ts === false && (
-                            <span className="text-xs text-red-500 font-medium flex-shrink-0 ml-2">실패</span>
-                          )}
+                          <div className="flex-shrink-0 ml-2">
+                            {ts === true && (
+                              <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> 연결됨
+                              </span>
+                            )}
+                            {ts === false && (
+                              <span className="text-xs text-red-500 font-medium">실패</span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <Input
@@ -585,7 +586,7 @@ export default function OnboardingPage() {
                   <div className="mt-4 flex items-center gap-2 text-xs text-slate-600">
                     <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                     <span>{filledCount}개 채널 URL 입력됨</span>
-                    {filledCount === 4 && <span className="text-green-600 font-medium">— 전체 채널 설정 완료!</span>}
+                    {filledCount === 2 && <span className="text-green-600 font-medium">— 전체 채널 설정 완료!</span>}
                   </div>
                 )}
               </CardContent>
