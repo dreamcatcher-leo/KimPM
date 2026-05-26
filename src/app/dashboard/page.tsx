@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import type { Profile, Project } from '@/types'
 import DashboardWeeklyAnalysis from '@/components/dashboard/DashboardWeeklyAnalysis'
+import TodayTodoPanel from '@/components/dashboard/TodayTodoPanel'
+import type { TodayTodo } from '@/components/dashboard/TodayTodoPanel'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -141,6 +143,154 @@ export default async function DashboardPage() {
 
   const activeProjects = allStats.map(s => s.project)
 
+  // ── 오늘 할 일 체크리스트 계산 ─────────────────────────────────────────────
+  const todayTodos: TodayTodo[] = []
+  const firstActive = allStats[0] ?? null
+  const hasProjects = projectStats.length > 0
+
+  if (!hasProjects) {
+    // ── 신규 가입자: 온보딩 투 트리 ──
+    todayTodos.push(
+      { id: 't0', done: false, urgent: true,  label: '첫 프로젝트 생성하기', sub: '외주사 이름·계약기간·목표를 입력하면 AI가 기능 목록을 자동 분석합니다', href: '/projects/new' },
+    )
+  } else {
+    // ── 기존 사용자: 실데이터 기반 할 일 ──
+
+    // 1) 기능이 아예 없는 프로젝트 → 기능 추가
+    const noFeatureProjects = allStats.filter(s => s.totalFeatures === 0)
+    if (noFeatureProjects.length > 0) {
+      const p = noFeatureProjects[0].project
+      todayTodos.push({
+        id: 'feat-add',
+        done: false, urgent: true,
+        label: `기능 목록 추가 — ${p.name}`,
+        sub: '기능이 없으면 외주사가 뭘 만들어야 할지 모릅니다. AI 분석으로 빠르게 생성하세요.',
+        href: `/projects/${p.id}/features/new`,
+        badge: '필수',
+      })
+    }
+
+    // 2) 기획서 미작성(planning) 기능이 있는 프로젝트 → AI 기획서 생성
+    const noPlanningProjects = allStats.filter(s => {
+      // features에 planning 상태가 있는지는 projectStats에 직접 없으므로
+      // totalFeatures > completedFeatures + inProgressFeatures + specApprovedFeatures 로 추정
+      const remainPlan = s.totalFeatures - s.completedFeatures - s.inProgressFeatures - s.specApprovedFeatures
+      return remainPlan > 0
+    })
+    if (noPlanningProjects.length > 0) {
+      const s = noPlanningProjects[0]
+      const remain = s.totalFeatures - s.completedFeatures - s.inProgressFeatures - s.specApprovedFeatures
+      todayTodos.push({
+        id: 'spec-gen',
+        done: remain === 0, urgent: remain > 5,
+        label: `기획서 미작성 기능 AI 초안 생성`,
+        sub: `${s.project.name} — ${remain}개 기능에 기획서가 없습니다. 기능 목록에서 일괄 생성하세요.`,
+        href: `/projects/${s.project.id}/features`,
+        badge: remain > 0 ? `${remain}개` : undefined,
+      })
+    }
+
+    // 3) 외주사 링크 미발급 확인 (access_links 별도 조회)
+    const accessLinksRes = await supabase
+      .from('access_links')
+      .select('project_id')
+      .in('project_id', allStats.map(s => s.project.id))
+      .eq('is_active', true)
+    const linkedProjectIds = new Set((accessLinksRes.data || []).map(l => l.project_id))
+    const noLinkProjects = allStats.filter(s => !linkedProjectIds.has(s.project.id))
+    if (noLinkProjects.length > 0) {
+      const p = noLinkProjects[0].project
+      todayTodos.push({
+        id: 'link-issue',
+        done: false, urgent: true,
+        label: `외주사 접근 링크 발급 — ${p.name}`,
+        sub: '링크를 발급해야 외주사가 일일 보고, 질문, 증빙 업로드를 할 수 있습니다.',
+        href: `/projects/${p.id}/dashboard`,
+        badge: '미발급',
+      })
+    } else if (allStats.length > 0) {
+      todayTodos.push({
+        id: 'link-ok',
+        done: true, urgent: false,
+        label: '외주사 접근 링크 발급 완료',
+        sub: '외주사가 포털에 접속할 수 있습니다.',
+        href: `/projects/${allStats[0].project.id}/settings`,
+      })
+    }
+
+    // 4) Must-Check 미확인
+    if (totalMustChecks > 0 && firstActive) {
+      todayTodos.push({
+        id: 'mustcheck',
+        done: false, urgent: true,
+        label: 'Must-Check 항목 확인 및 처리',
+        sub: '외주사가 대표 확인을 기다리고 있습니다. 늦을수록 개발이 멈춥니다.',
+        href: `/projects/${firstActive.project.id}/must-check`,
+        badge: `${totalMustChecks}건`,
+      })
+    } else {
+      todayTodos.push({
+        id: 'mustcheck-ok',
+        done: true, urgent: false,
+        label: 'Must-Check 항목 없음',
+        sub: '외주사의 즉시 확인 요청이 없습니다.',
+        href: firstActive ? `/projects/${firstActive.project.id}/must-check` : '/dashboard',
+      })
+    }
+
+    // 5) 의사결정 대기
+    if (totalDecisions > 0 && firstActive) {
+      todayTodos.push({
+        id: 'decision',
+        done: false, urgent: totalDecisions >= 2,
+        label: '의사결정 대기 항목 승인·반려',
+        sub: '대표 결정이 없으면 외주사가 임의로 진행해 나중에 분쟁이 생깁니다.',
+        href: `/projects/${firstActive.project.id}/decisions`,
+        badge: `${totalDecisions}건`,
+      })
+    } else {
+      todayTodos.push({
+        id: 'decision-ok',
+        done: true, urgent: false,
+        label: '대기 중인 의사결정 없음',
+        sub: '승인이 필요한 항목이 없습니다.',
+        href: firstActive ? `/projects/${firstActive.project.id}/decisions` : '/dashboard',
+      })
+    }
+
+    // 6) 이번 주 보고 미수신 (경과 영업일 기준)
+    const reportRate = expectedReports > 0 ? thisWeekReports / expectedReports : 1
+    if (workingDaysElapsed >= 1 && reportRate < 0.5 && firstActive) {
+      todayTodos.push({
+        id: 'report-check',
+        done: false, urgent: reportRate === 0,
+        label: '외주사 일일 보고 수신 확인',
+        sub: `이번 주 ${workingDaysElapsed}일 경과했지만 보고가 ${thisWeekReports}건뿐입니다. 외주사에 독려가 필요합니다.`,
+        href: `/projects/${firstActive.project.id}/overview`,
+        badge: `${thisWeekReports}/${expectedReports}건`,
+      })
+    } else if (workingDaysElapsed >= 1) {
+      todayTodos.push({
+        id: 'report-ok',
+        done: true, urgent: false,
+        label: '이번 주 보고 정상 수신 중',
+        sub: `${thisWeekReports}건 보고 수신 완료`,
+        href: firstActive ? `/projects/${firstActive.project.id}/overview` : '/dashboard',
+      })
+    }
+
+    // 7) 주간 실행도 AI 분석 (매주 월요일 이후)
+    if (firstActive) {
+      todayTodos.push({
+        id: 'weekly-analysis',
+        done: false, urgent: false,
+        label: '주간 실행도 AI 분석 확인',
+        sub: 'AI가 이번 주 리스크와 지연 신호를 분석했습니다. 대시보드 하단에서 확인하세요.',
+        href: `/projects/${firstActive.project.id}/dashboard`,
+      })
+    }
+  }
+
   // 사이드바 스위처용 데이터 변환
   const projectsForSidebar: ProjectSummary[] = projectStats.map(s => ({
     id: s.project.id,
@@ -158,6 +308,14 @@ export default async function DashboardPage() {
       topBarTitle="전체 대시보드"
     >
       <div className="flex-1 p-4 lg:p-6 space-y-6">
+
+          {/* ============================================ */}
+          {/* 오늘 할 일 체크리스트 — 최상단 고정 */}
+          {/* ============================================ */}
+          <TodayTodoPanel
+            todos={todayTodos}
+            founderName={profile?.full_name}
+          />
 
           {/* ============================================ */}
           {/* HERO SECTION: 전체 개발 진행도 대형 바 */}
