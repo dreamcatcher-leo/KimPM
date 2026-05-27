@@ -46,29 +46,6 @@ const PG_BADGE: Record<string, string> = {
   P2: 'text-yellow-700 bg-yellow-50 border-yellow-200',
 }
 
-// 계약기간 → 주 목록
-function getWeekRanges(contractStart: string, contractEnd: string): { start: string; end: string; label: string }[] {
-  const start = parseDate(contractStart)
-  const end = parseDate(contractEnd)
-  const weeks: { start: string; end: string; label: string }[] = []
-  let cur = new Date(start)
-  // 해당 주 월요일로 정렬
-  const dayOffset = (cur.getDay() + 6) % 7
-  cur.setDate(cur.getDate() - dayOffset)
-  let weekNum = 1
-  while (cur <= end) {
-    const weekEnd = new Date(cur)
-    weekEnd.setDate(cur.getDate() + 6)
-    weeks.push({
-      start: cur.toISOString().split('T')[0],
-      end: weekEnd.toISOString().split('T')[0],
-      label: `${weekNum}주차 (${cur.getMonth() + 1}/${cur.getDate()} ~ ${weekEnd.getMonth() + 1}/${weekEnd.getDate()})`,
-    })
-    cur.setDate(cur.getDate() + 7)
-    weekNum++
-  }
-  return weeks
-}
 
 export default function VendorCalendarClient({ token, project, features, schedules: initialSchedules }: Props) {
   const [schedules, setSchedules] = useState<TaskSchedule[]>(initialSchedules as TaskSchedule[])
@@ -137,30 +114,52 @@ export default function VendorCalendarClient({ token, project, features, schedul
     }
     setAiLoading(true)
     try {
-      const weeks = getWeekRanges(project.contract_start, project.contract_end)
+      // 일정 미배치 기능만 추출 (P0 → P1 → P2 순)
       const p0 = features.filter(f => f.priority_group === 'P0')
       const p1 = features.filter(f => f.priority_group === 'P1')
       const p2 = features.filter(f => f.priority_group === 'P2')
       const allFeatures = [...p0, ...p1, ...p2]
+      const unscheduled = allFeatures.filter(f => !schedules.some(s => s.feature_id === f.id))
 
-      const weeksPerFeature = Math.max(1, Math.floor(weeks.length / Math.max(allFeatures.length, 1)))
+      if (unscheduled.length === 0) {
+        toast.info('이미 모든 기능에 일정이 배치되어 있습니다.')
+        setAiLoading(false)
+        return
+      }
+
+      // 계약기간 전체 일수를 기능 수로 균등 분할
+      const contractStart = parseDate(project.contract_start)
+      const contractEnd = parseDate(project.contract_end)
+      const totalDays = Math.max(
+        1,
+        Math.round((contractEnd.getTime() - contractStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      )
+      // 기능 1개당 할당 일수 (최소 3일, 최대 14일)
+      const daysPerFeature = Math.min(14, Math.max(3, Math.floor(totalDays / unscheduled.length)))
+
       const newSchedules: Omit<TaskSchedule, 'id' | 'created_at'>[] = []
-      let weekIdx = 0
+      let cursor = new Date(contractStart)
 
-      for (const feature of allFeatures) {
-        // 이미 일정 있으면 스킵
-        if (schedules.some(s => s.feature_id === feature.id)) continue
-        if (weekIdx >= weeks.length) break
-        const w = weeks[weekIdx]
-        const endIdx = Math.min(weekIdx + weeksPerFeature - 1, weeks.length - 1)
+      for (const feature of unscheduled) {
+        // cursor가 계약 종료일을 넘어서도 계속 배치 (날짜 초과 시 마지막 기능들은 계약 종료일에 몰림)
+        const start = new Date(cursor)
+        const end = new Date(cursor)
+        end.setDate(end.getDate() + daysPerFeature - 1)
+
+        // 종료일이 계약 종료일을 초과하면 계약 종료일로 클램핑
+        const clampedEnd = end > contractEnd ? new Date(contractEnd) : end
+
         newSchedules.push({
           feature_id: feature.id,
-          start_date: w.start,
-          end_date: weeks[endIdx].end,
+          start_date: start.toISOString().split('T')[0],
+          end_date: clampedEnd.toISOString().split('T')[0],
           note: 'AI 자동 배치',
           status: 'pending',
         })
-        weekIdx += weeksPerFeature
+
+        // 다음 기능 시작일 = 현재 종료일 + 1일
+        cursor = new Date(end)
+        cursor.setDate(cursor.getDate() + 1)
       }
 
       // API 직렬 저장
@@ -181,7 +180,7 @@ export default function VendorCalendarClient({ token, project, features, schedul
         setSchedules(prev => [...prev, ...saved])
         toast.success(`${saved.length}개 기능의 일정을 자동 배치했습니다. 대표님 승인 후 확정됩니다.`)
       } else {
-        toast.info('이미 모든 기능에 일정이 배치되어 있거나 배치할 기능이 없습니다.')
+        toast.error('일정 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
       }
     } catch {
       toast.error('자동 배치 중 오류가 발생했습니다.')
