@@ -15,6 +15,8 @@ import VendorLinkCard from '@/components/dashboard/VendorLinkCard'
 import FounderBriefCard from '@/components/dashboard/FounderBriefCard'
 import DashboardWeeklyAnalysis from '@/components/dashboard/DashboardWeeklyAnalysis'
 import GenerateBriefButton from '@/components/dashboard/GenerateBriefButton'
+import TodayTodoPanel from '@/components/dashboard/TodayTodoPanel'
+import type { TodayTodo } from '@/components/dashboard/TodayTodoPanel'
 
 // ─── 비개발자 번역 규칙 ────────────────────────────────────────────────────────
 function translateRiskType(type: string): string {
@@ -151,6 +153,73 @@ export default async function ProjectDashboard({
 
   const urgentCount = (mustCheckItems?.length || 0) + (pendingDecisions?.length || 0) + (openRisks?.filter(r => r.level === '위험' || r.level === 'Must_Check_필요').length || 0)
 
+  // ── 이 프로젝트의 오늘 할 일 계산 ────────────────────────────────────────────
+  const now2 = new Date()
+  const dayOfWeek2 = now2.getDay()
+  const monday2 = new Date(now2)
+  monday2.setDate(now2.getDate() - (dayOfWeek2 === 0 ? 6 : dayOfWeek2 - 1))
+  const weekStart2 = monday2.toISOString().split('T')[0]
+  const sunday2 = new Date(monday2)
+  sunday2.setDate(monday2.getDate() + 6)
+  const weekEnd2 = sunday2.toISOString().split('T')[0]
+  const workingDaysElapsed2 = Math.max(0, Math.min(5, Math.floor((now2.getTime() - monday2.getTime()) / (1000 * 60 * 60 * 24)) + 1))
+
+  const { count: thisWeekReportCount2 } = await supabase
+    .from('reports')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', id)
+    .gte('report_date', weekStart2)
+    .lte('report_date', weekEnd2)
+
+  const totalFeaturesCount = features?.length || 0
+  const completedFeaturesCount = features?.filter(f => f.status === 'approved' || f.status === 'completed').length || 0
+  const inProgressFeaturesCount = features?.filter(f => f.status === 'in_progress').length || 0
+  const specApprovedFeaturesCount = features?.filter(f => f.status === 'spec_approved').length || 0
+  const remainPlan2 = totalFeaturesCount - completedFeaturesCount - inProgressFeaturesCount - specApprovedFeaturesCount
+
+  const projectTodos: TodayTodo[] = []
+
+  // 1) 기능 없음
+  if (totalFeaturesCount === 0) {
+    projectTodos.push({ id: 'feat-add', done: false, urgent: true, label: '기능 목록 추가하기', sub: 'AI 분석으로 기능을 빠르게 생성하세요.', href: `/projects/${id}/features/new`, badge: '필수' })
+  }
+
+  // 2) 기획서 미작성
+  if (remainPlan2 > 0) {
+    projectTodos.push({ id: 'spec-gen', done: false, urgent: remainPlan2 > 5, label: `기획서 미작성 기능 AI 초안 생성`, sub: `${remainPlan2}개 기능에 기획서가 없습니다.`, href: `/projects/${id}/features`, badge: `${remainPlan2}개` })
+  } else if (totalFeaturesCount > 0) {
+    projectTodos.push({ id: 'spec-ok', done: true, urgent: false, label: '모든 기능에 기획서 있음', sub: '기획서가 모두 작성된 상태입니다.', href: `/projects/${id}/features` })
+  }
+
+  // 3) 외주사 링크
+  if (!vendorLink) {
+    projectTodos.push({ id: 'link-issue', done: false, urgent: true, label: '외주사 접근 링크 발급', sub: '링크가 없으면 외주사가 보고를 제출할 수 없습니다.', href: `/projects/${id}/settings`, badge: '미발급' })
+  } else {
+    projectTodos.push({ id: 'link-ok', done: true, urgent: false, label: '외주사 접근 링크 발급 완료', sub: '외주사가 포털에 접속할 수 있습니다.', href: `/projects/${id}/settings` })
+  }
+
+  // 4) Must-Check
+  if ((mustCheckItems?.length || 0) > 0) {
+    projectTodos.push({ id: 'mustcheck', done: false, urgent: true, label: 'Must-Check 항목 확인 및 처리', sub: `${mustCheckItems?.length}건 — 외주사가 대표 확인을 기다리고 있습니다.`, href: `/projects/${id}/must-check`, badge: `${mustCheckItems?.length}건` })
+  } else {
+    projectTodos.push({ id: 'mustcheck-ok', done: true, urgent: false, label: 'Must-Check 항목 없음', sub: '외주사의 즉시 확인 요청이 없습니다.', href: `/projects/${id}/must-check` })
+  }
+
+  // 5) 의사결정
+  if ((pendingDecisions?.length || 0) > 0) {
+    projectTodos.push({ id: 'decision', done: false, urgent: (pendingDecisions?.length || 0) >= 2, label: '의사결정 대기 항목 승인·반려', sub: `${pendingDecisions?.length}건 대기 중 — 대표 결정이 없으면 분쟁이 생깁니다.`, href: `/projects/${id}/decisions`, badge: `${pendingDecisions?.length}건` })
+  } else {
+    projectTodos.push({ id: 'decision-ok', done: true, urgent: false, label: '대기 중인 의사결정 없음', sub: '승인이 필요한 항목이 없습니다.', href: `/projects/${id}/decisions` })
+  }
+
+  // 6) 보고 미수신
+  const reportRate2 = workingDaysElapsed2 > 0 ? (thisWeekReportCount2 || 0) / workingDaysElapsed2 : 1
+  if (workingDaysElapsed2 >= 1 && reportRate2 < 0.5) {
+    projectTodos.push({ id: 'report-check', done: false, urgent: reportRate2 === 0, label: '외주사 일일 보고 수신 확인', sub: `이번 주 ${workingDaysElapsed2}일 경과, 보고 ${thisWeekReportCount2 || 0}건. 독려가 필요합니다.`, href: `/projects/${id}/overview`, badge: `${thisWeekReportCount2 || 0}/${workingDaysElapsed2}건` })
+  } else if (workingDaysElapsed2 >= 1) {
+    projectTodos.push({ id: 'report-ok', done: true, urgent: false, label: '이번 주 보고 정상 수신 중', sub: `${thisWeekReportCount2 || 0}건 보고 수신 완료`, href: `/projects/${id}/overview` })
+  }
+
   return (
     <div className="p-6 space-y-5 max-w-[1200px]">
 
@@ -240,6 +309,11 @@ export default async function ProjectDashboard({
           </div>
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════
+          오늘 할 일 체크리스트
+      ══════════════════════════════════════════ */}
+      <TodayTodoPanel todos={projectTodos} />
 
       {/* ══════════════════════════════════════════
           대표 결정함 (고정 영역) — 지금 결정해야 하는 것
