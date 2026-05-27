@@ -16,7 +16,7 @@ export default function VendorOnboardingPage() {
   const [error, setError] = useState('')
 
   // 입력값
-  const [email, setEmail] = useState('vendor-test@kimpm.dev')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [vendorName, setVendorName] = useState('')
   const [contactName, setContactName] = useState('')
@@ -47,14 +47,8 @@ export default function VendorOnboardingPage() {
 
       if (!res.ok) {
         if (data.alreadyLinked) {
-          // 이미 연결된 계정 → 로그인 시도
-          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-          if (signInError) {
-            setError(`이미 연결된 계정입니다. 기존 비밀번호로 로그인해 주세요.\n오류: ${signInError.message}`)
-            setStep('form')
-            return
-          }
-          router.push(`/vendor/${token}`)
+          // 이미 계정이 연결된 링크 → 로그인 페이지로 안내
+          router.push(`/vendor/${token}/login`)
           return
         }
         setError(data.error || '오류가 발생했습니다')

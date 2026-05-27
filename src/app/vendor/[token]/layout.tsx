@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import type { Project, AccessLink } from '@/types'
@@ -14,6 +15,16 @@ export default async function VendorLayout({
   const { token } = await params
   const admin = createAdminClient()
 
+  // 현재 pathname (middleware에서 주입)
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || ''
+
+  // onboarding / login 페이지는 별도 레이아웃 (nav 없이, 인증 체크 없이 렌더)
+  const isOnboardingPage = pathname.endsWith('/onboarding')
+  const isLoginPage = pathname.endsWith('/login')
+  const isAuthPage = isOnboardingPage || isLoginPage
+
+  // 1. 토큰 유효성 확인
   const { data: link } = await admin
     .from('access_links')
     .select(`*, projects(*)`)
@@ -29,28 +40,37 @@ export default async function VendorLayout({
             <span className="text-3xl">🔗</span>
           </div>
           <h1 className="text-xl font-bold text-slate-800 mb-2">유효하지 않은 링크</h1>
-          <p className="text-slate-500 text-sm">링크가 만료되었거나 유효하지 않습니다.<br />대표에게 새 링크를 요청해주세요.</p>
+          <p className="text-slate-500 text-sm">
+            링크가 만료되었거나 유효하지 않습니다.<br />
+            대표에게 새 링크를 요청해주세요.
+          </p>
         </div>
       </div>
     )
   }
 
-  // 온보딩 완료 여부 체크 → 미완료 시 onboarding 페이지로 redirect
-  // (단, 현재 경로가 /onboarding인 경우에는 redirect하지 않음)
-  const headersList = await headers()
-  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || ''
-  const isOnboardingPage = pathname.includes('/onboarding')
+  // auth 페이지(onboarding/login)는 인증 검사 없이 그냥 렌더
+  if (isAuthPage) {
+    return <>{children}</>
+  }
 
-  if (!link.onboarding_completed && !isOnboardingPage) {
+  // 2. 온보딩(회원가입) 미완료 → /vendor/{token}/onboarding 으로 redirect
+  if (!link.onboarding_completed) {
     redirect(`/vendor/${token}/onboarding`)
   }
 
-  const project = link.projects
+  // 3. 온보딩 완료 → 현재 로그인된 사용자가 연결된 vendor_user_id 와 일치하는지 확인
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // 온보딩 페이지는 독립 레이아웃 (nav 없음)
-  if (isOnboardingPage) {
-    return <>{children}</>
+  const isLinkedUser = user && link.vendor_user_id && user.id === link.vendor_user_id
+
+  if (!isLinkedUser) {
+    // 미로그인이거나 다른 계정으로 로그인 → 외주사 전용 로그인 페이지로
+    redirect(`/vendor/${token}/login`)
   }
+
+  const project = link.projects
 
   return (
     <div className="min-h-screen bg-slate-50">
